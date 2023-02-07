@@ -5,9 +5,9 @@
 #include "tokenize.h"
 #include "util.h"
 
-struct TokenList* tokenize(char* str)
+token_list_t* tokenize(char* str)
 {
-  struct TokenList* result = allocate_token_list();
+  token_list_t* result = allocate_token_list();
   result->tokens = NULL;
   result->length = 0;
 
@@ -69,22 +69,22 @@ struct TokenList* tokenize(char* str)
   return result;
 }
 
-static struct TokenList* allocate_token_list()
+static token_list_t* allocate_token_list()
 {
-  return malloc(sizeof(struct TokenList));
+  return malloc(sizeof(token_list_t));
 }
 
-void free_token_list(struct TokenList* token_list)
+void free_token_list(token_list_t* token_list)
 {
-  for (unsigned long long i = 0; i < token_list->length; i++) {
+  for (token_length_t i = 0; i < token_list->length; i++) {
     free(token_list->tokens[i].value_ptr);
   }
   free(token_list->tokens);
 }
 
-static struct Token* reallocate_tokens(struct Token* tokens, unsigned long long size)
+static token_t* reallocate_tokens(token_t* tokens, token_length_t length)
 {
-  void* ptr = realloc(tokens, size * sizeof(struct Token));
+  void* ptr = realloc(tokens, length * sizeof(token_t));
 
   if (ptr == NULL) {
     die("reallocate_token: failed to allocate memory");
@@ -93,7 +93,7 @@ static struct Token* reallocate_tokens(struct Token* tokens, unsigned long long 
   return ptr;
 }
 
-static void append_token(struct TokenList* token_list, int token_type)
+static void append_token(token_list_t* token_list, token_type_t token_type)
 {
   token_list->tokens = reallocate_tokens(token_list->tokens, token_list->length + 1);
   token_list->tokens[token_list->length].type = token_type;
@@ -124,7 +124,7 @@ static void read_string(char** str_ptr, char** read_str_ptr)
   die("read_string: found an unterminated string");
 }
 
-static void read_number(char** str_ptr, void** read_number_ptr, enum TokenType* type_ptr)
+static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* type_ptr)
 {
   char* start = *str_ptr;
   char* end = NULL;
@@ -193,7 +193,7 @@ static void read_number(char** str_ptr, void** read_number_ptr, enum TokenType* 
 }
 
 const int PRINT_BUFFER_SIZE = 100;
-void print_token_list(struct Token* token)
+void print_token_list(token_t* token)
 {
   char buffer[PRINT_BUFFER_SIZE];
 
