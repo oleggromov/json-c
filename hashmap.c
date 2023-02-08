@@ -68,18 +68,17 @@ void* set(hashmap_t* obj, char* key, void* value_ptr)
     return prev_value_ptr;
   }
 
-  const hashmap_size_t new_size = obj->bucket_sizes[bucket_no] + 1;
-  obj->value_ptrs[bucket_no] = realloc(obj->value_ptrs[bucket_no], new_size * sizeof(hashmap_value_t*));
+  obj->value_ptrs[bucket_no] = realloc(obj->value_ptrs[bucket_no], (obj->bucket_sizes[bucket_no] + 1) * sizeof(hashmap_value_t*));
 
   hashmap_value_t* new_value = malloc(sizeof(hashmap_value_t));
 
-  const unsigned int key_len = strlen(key);
-  new_value->key = malloc(key_len * sizeof(char));
-  strncpy(new_value->key, key, key_len);
+  new_value->key = malloc((strlen(key) + 1) * sizeof(char));
+  *new_value->key = '\0';
+  strcat(new_value->key, key);
   new_value->value = value_ptr;
 
   obj->value_ptrs[bucket_no][obj->bucket_sizes[bucket_no]] = new_value;
-  obj->bucket_sizes[bucket_no] = new_size;
+  obj->bucket_sizes[bucket_no] += 1;
 
   return NULL;
 }
