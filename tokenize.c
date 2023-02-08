@@ -11,9 +11,11 @@ token_list_t* tokenize(char* str)
   result->tokens = NULL;
   result->length = 0;
 
-  char error_buf[128];
-
   while (*str) {
+    char error_buf[128];
+    int* bool_value_ptr;
+    int null_result;
+
     switch (*str) {
       case '{':
         append_token(result, Curly);
@@ -21,6 +23,14 @@ token_list_t* tokenize(char* str)
 
       case '}':
         append_token(result, Uncurly);
+        break;
+
+      case '[':
+        append_token(result, Square);
+        break;
+
+      case ']':
+        append_token(result, Unsquare);
         break;
 
       case ':':
@@ -52,6 +62,28 @@ token_list_t* tokenize(char* str)
         read_number(&str, &result->tokens[result->length - 1].value_ptr, &result->tokens[result->length - 1].type);
         break;
 
+      case 't':
+      case 'f':
+        bool_value_ptr = read_bool(&str);
+        if (NULL == bool_value_ptr) {
+          sprintf(error_buf, "tokenize: expected true or false literal after \"%c\" in input", *str);
+          die(error_buf);
+        }
+
+        append_token(result, Bool);
+        result->tokens[result->length - 1].value_ptr = bool_value_ptr;
+        break;
+
+      case 'n':
+        null_result = read_null(&str);
+        if (-1 == null_result) {
+          sprintf(error_buf, "tokenize: expected null literal after \"%c\" in input", *str);
+          die(error_buf);
+        }
+
+        append_token(result, Null);
+        break;
+
       case ' ':
       case '\n':
       case '\r':
@@ -71,7 +103,12 @@ token_list_t* tokenize(char* str)
 
 static token_list_t* allocate_token_list()
 {
-  return malloc(sizeof(token_list_t));
+  void *ptr = malloc(sizeof(token_list_t));
+  if (ptr == NULL) {
+    die("allocate_token_list: failed to allocated memory");
+  }
+
+  return ptr;
 }
 
 void free_token_list(token_list_t* token_list)
@@ -82,6 +119,7 @@ void free_token_list(token_list_t* token_list)
   free(token_list->tokens);
 }
 
+// TODO allocate more in advance
 static token_t* reallocate_tokens(token_t* tokens, token_length_t length)
 {
   void* ptr = realloc(tokens, length * sizeof(token_t));
@@ -192,9 +230,44 @@ static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* ty
   } while (*(*str_ptr)++);
 }
 
-const int PRINT_BUFFER_SIZE = 100;
+// Returns
+// NULL if not a bool
+// a pointer to allocated int 0/1 otherwise
+static int* read_bool(char **str_ptr)
+{
+  if (0 == strncmp("true", *str_ptr, 4)) {
+    *str_ptr += 3;
+    int* value = malloc(sizeof(int));
+    *value = 1;
+    return value;
+  }
+
+  if (0 == strncmp("false", *str_ptr, 5)) {
+    *str_ptr += 4;
+    int* value = malloc(sizeof(int));
+    *value = 0;
+    return value;
+  }
+
+  return NULL;
+}
+
+// Returns
+// 0 if null
+// -1 otherwise
+static int read_null(char **str_ptr)
+{
+  if (0 == strncmp("null", *str_ptr, 4)) {
+    *str_ptr += 3;
+    return 0;
+  }
+
+  return -1;
+}
+
 void print_token_list(token_t* token)
 {
+  const int PRINT_BUFFER_SIZE = 100;
   char buffer[PRINT_BUFFER_SIZE];
 
   switch (token->type)
@@ -204,6 +277,12 @@ void print_token_list(token_t* token)
       break;
     case Uncurly:
       printf("<UNCURLY> ");
+      break;
+    case Square:
+      printf("<SQUARE> ");
+      break;
+    case Unsquare:
+      printf("<UNSQUARE> ");
       break;
     case Colon:
       printf("<COLON> ");
@@ -220,6 +299,12 @@ void print_token_list(token_t* token)
       break;
     case Long:
       printf("<LONG %d> ", *((int*) token->value_ptr));
+      break;
+    case Bool:
+      printf("<BOOL %d> ", *((int*) token->value_ptr));
+      break;
+    case Null:
+      printf("<NULL> ");
       break;
   }
 }

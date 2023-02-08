@@ -1,18 +1,18 @@
 #ifndef TOKENIZE_H
 #define TOKENIZE_H
 
-typedef enum TokenType {
-  Curly, Uncurly, Colon, Comma, String, Double, Long
+typedef enum {
+  Curly, Uncurly, Square, Unsquare, Colon, Comma, String, Double, Long, Bool, Null
 } token_type_t;
 
-typedef struct Token {
+typedef struct {
   token_type_t type;
   void* value_ptr;
 } token_t;
 
 typedef unsigned long long token_length_t;
 
-typedef struct TokenList {
+typedef struct {
   token_length_t length;
   token_t* tokens;
 } token_list_t;
@@ -29,5 +29,7 @@ static void append_token(token_list_t* token_list, token_type_t token_type);
 
 static void read_string(char** str_ptr, char** read_str_ptr);
 static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* type_ptr);
+static int* read_bool(char** str_ptr);
+static int read_null(char** str_ptr);
 
 #endif //TOKENIZE_H
