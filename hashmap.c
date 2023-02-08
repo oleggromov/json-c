@@ -4,7 +4,7 @@
 #include "hashmap.h"
 #include "murmur3_32.h"
 
-hashmap_t* create_hashmap()
+hashmap_t* hashmap_create()
 {
   const int BUCKETS = 1024;
   hashmap_t* obj = malloc(sizeof(hashmap_t));
@@ -19,7 +19,7 @@ hashmap_t* create_hashmap()
   return obj;
 }
 
-void free_hashmap(hashmap_t* obj)
+void hashmap_free(hashmap_t* obj)
 {
   // TODO
 }
@@ -40,7 +40,10 @@ static hashmap_value_t* get_value(const hashmap_t* obj, const hashmap_size_t buc
   return NULL;
 }
 
-void* get(hashmap_t* obj, char* key)
+// Returns
+// void* to a value if the key exists
+// NULL otherwise
+void* hashmap_get(hashmap_t* obj, char* key)
 {
   uint32_t key_hash = hash_key(key);
   hashmap_size_t bucket_no = key_hash % obj->size;
@@ -56,7 +59,7 @@ void* get(hashmap_t* obj, char* key)
 // Returns
 // - NULL if value is appended
 // - void* to a previous value if replaced
-void* set(hashmap_t* obj, char* key, void* value_ptr)
+void* hashmap_set(hashmap_t* obj, char* key, void* value_ptr)
 {
   uint32_t key_hash = hash_key(key);
   hashmap_size_t bucket_no = key_hash % obj->size;
@@ -72,6 +75,7 @@ void* set(hashmap_t* obj, char* key, void* value_ptr)
 
   hashmap_value_t* new_value = malloc(sizeof(hashmap_value_t));
 
+  // TODO use strdup
   new_value->key = malloc((strlen(key) + 1) * sizeof(char));
   *new_value->key = '\0';
   strcat(new_value->key, key);
@@ -86,7 +90,7 @@ void* set(hashmap_t* obj, char* key, void* value_ptr)
 // Returns
 // - void* to a value was removed
 // - NULL if element wasn't found
-void* del(hashmap_t* obj, char* key)
+void* hashmap_del(hashmap_t* obj, char* key)
 {
   uint32_t key_hash = hash_key(key);
   hashmap_size_t bucket_no = key_hash % obj->size;
@@ -114,7 +118,7 @@ static void print_hash(char* str)
 
 int main()
 {
-  hashmap_t* hashmap = create_hashmap();
+  hashmap_t* hashmap = hashmap_create();
   int* value1 = malloc(sizeof(int));
   *value1 = 1024;
 
@@ -122,21 +126,20 @@ int main()
   *str = '\0';
   strcat(str, "hello world");
 
+  hashmap_set(hashmap, "test key", value1);
+  printf("test key: pointer = %p, value = %d\n", hashmap_get(hashmap, "test key"), *(int*) hashmap_get(hashmap, "test key"));
 
-  set(hashmap, "test key", value1);
-  printf("test key: pointer = %p, value = %d\n", get(hashmap, "test key"), *(int*) get(hashmap, "test key"));
-
-  set(hashmap, "another key", str);
-  printf("another key: pointer = %p, value = %s\n", get(hashmap, "another key"), get(hashmap, "another key"));
+  hashmap_set(hashmap, "another key", str);
+  printf("another key: pointer = %p, value = %s\n", hashmap_get(hashmap, "another key"), hashmap_get(hashmap, "another key"));
 
   *str = '\0';
   strcat(str, "no");
 
-  printf("another key (after messing with pointer): pointer = %p, value = %s\n", get(hashmap, "another key"), get(hashmap, "another key"));
+  printf("another key (after messing with pointer): pointer = %p, value = %s\n", hashmap_get(hashmap, "another key"), hashmap_get(hashmap, "another key"));
 
-  void *replaced = set(hashmap, "another key", value1);
+  void *replaced = hashmap_set(hashmap, "another key", value1);
   printf("another key (old value): pointer = %p, value = %s\n", replaced, replaced);
-  printf("another key (replaced): pointer = %p, value = %d\n", get(hashmap, "another key"), *(int*) get(hashmap, "another key"));
+  printf("another key (replaced): pointer = %p, value = %d\n", hashmap_get(hashmap, "another key"), *(int*) hashmap_get(hashmap, "another key"));
 
 
   // print_hash("");

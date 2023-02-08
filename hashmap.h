@@ -17,11 +17,11 @@ typedef struct {
   hashmap_value_t*** value_ptrs;
 } hashmap_t;
 
-void* get(hashmap_t* obj, char* key);
-void* set(hashmap_t* obj, char* key, void* value_ptr);
-void* del(hashmap_t* obj, char* key);
+void* hashmap_get(hashmap_t* obj, char* key);
+void* hashmap_set(hashmap_t* obj, char* key, void* value_ptr);
+void* hashmap_del(hashmap_t* obj, char* key);
 
-hashmap_t* create_hashmap();
-void free_hashmap(hashmap_t* obj);
+hashmap_t* hashmap_create();
+void hashmap_free(hashmap_t* obj);
 
 #endif
