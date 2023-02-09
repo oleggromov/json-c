@@ -106,17 +106,34 @@ void* hashmap_del(hashmap_t* obj, char* key)
 {
   uint32_t key_hash = hash_key(key);
   long bucket_no = key_hash % obj->size;
-  hashmap_value_t* value_holder = get_value(obj, bucket_no, key);
+  hashmap_value_t* value_holder;
+  int value_index = -1;
+
+  // Find the value in a bucket and rearrange the values array
+  for (long i = 0; i < obj->bucket_sizes[bucket_no]; i++) {
+    if (0 == strcmp(key, obj->value_ptrs[bucket_no][i]->key)) {
+      value_holder = obj->value_ptrs[bucket_no][i];
+      value_index = i;
+    }
+
+    if (value_index > -1 && i < obj->bucket_sizes[bucket_no] - 1) {
+      obj->value_ptrs[bucket_no][i] = obj->value_ptrs[bucket_no][i + 1];
+    }
+  }
 
   if (value_holder == NULL) {
     return NULL;
   }
 
-  void* removed_value = value_holder->value;
+  void* removed_value_ptr = value_holder->value;
 
-  // TODO remove the value + resize the array
+  // Deallocate memory and downsize the array
+  free(value_holder->key);
+  free(value_holder);
+  obj->bucket_sizes[bucket_no] -= 1;
+  obj->value_ptrs[bucket_no] = realloc(obj->value_ptrs[bucket_no], obj->bucket_sizes[bucket_no] * sizeof(hashmap_value_t*));
 
-  return removed_value;
+  return removed_value_ptr;
 }
 
 unsigned int hashmap_count_keys(hashmap_t* obj)
@@ -187,9 +204,9 @@ int main()
 
   printf("another key (after messing with pointer): pointer = %p, value = %s\n", hashmap_get(hashmap, "another key"), hashmap_get(hashmap, "another key"));
 
-  void *replaced = hashmap_set(hashmap, "another key", value1);
-  printf("another key (old value): pointer = %p, value = %s\n", replaced, replaced);
-  printf("another key (replaced): pointer = %p, value = %d\n", hashmap_get(hashmap, "another key"), *(int*) hashmap_get(hashmap, "another key"));
+  // void *replaced = hashmap_set(hashmap, "another key", value1);
+  // printf("another key (old value): pointer = %p, value = %s\n", replaced, replaced);
+  // printf("another key (replaced): pointer = %p, value = %d\n", hashmap_get(hashmap, "another key"), *(int*) hashmap_get(hashmap, "another key"));
 
   printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
 
@@ -211,12 +228,20 @@ int main()
   printf("key count = %d\n", key_count);
   printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
 
-  // char** keys = hashmap_get_keys(hashmap);
+  printf("\nNow removing test keys...\n");
+  char** keys = hashmap_get_keys(hashmap);
+  for (long i = 0; i < key_count; i++) {
+    if (i % 2 == 0) {
+      if (strcmp("another key", keys[i]) != 0 && strcmp("test key", keys[i]) != 0) {
+        hashmap_del(hashmap, keys[i]);
+      }
+    }
+  }
 
-  // for (long i = 0; i < key_count; i++) {
-  //   printf("%s ", keys[i]);
-  // }
-  // printf("\n");
+  printf("test key: pointer = %p, value = %d\n", hashmap_get(hashmap, "test key"), *(int*) hashmap_get(hashmap, "test key"));
+  printf("another key: pointer = %p, value = %s\n", hashmap_get(hashmap, "another key"), hashmap_get(hashmap, "another key"));
+  printf("key count = %d\n", hashmap_count_keys(hashmap));
+  printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
 
 
   hashmap = hashmap_free(hashmap);
