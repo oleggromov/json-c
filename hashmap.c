@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "hashmap.h"
 #include "murmur3_32.h"
@@ -10,8 +11,8 @@ hashmap_t* hashmap_create()
   hashmap_t* obj = malloc(sizeof(hashmap_t));
 
   obj->value_ptrs = malloc(BUCKETS * sizeof(hashmap_value_t*));
-  obj->bucket_sizes = malloc(BUCKETS * sizeof(hashmap_size_t));
-  for (hashmap_size_t i = 0; i < BUCKETS; i++) {
+  obj->bucket_sizes = malloc(BUCKETS * sizeof(long));
+  for (long i = 0; i < BUCKETS; i++) {
     obj->bucket_sizes[i] = 0;
   }
   obj->size = BUCKETS;
@@ -19,9 +20,20 @@ hashmap_t* hashmap_create()
   return obj;
 }
 
-void hashmap_free(hashmap_t* obj)
+// Always returns NULL and should be used to replace the old pointer
+void* hashmap_free(hashmap_t* obj)
 {
-  // TODO
+  for (int bucket_no = 0; bucket_no < obj->size; bucket_no++) {
+    for (int i = 0; i < obj->bucket_sizes[bucket_no]; i++) {
+      free(obj->value_ptrs[bucket_no][i]); // freeing the hashmap_value_t's
+    }
+    free(obj->value_ptrs[bucket_no]); // freeing the value array
+  }
+  free(obj->value_ptrs); // freeing the buckets array
+  free(obj->bucket_sizes);
+  free(obj); // freeing the struct pointer
+
+  return NULL;
 }
 
 static uint32_t hash_key(const char* key)
@@ -29,9 +41,9 @@ static uint32_t hash_key(const char* key)
   return murmur3_32((uint8_t*) key, strlen(key), 0x2300FEED);
 }
 
-static hashmap_value_t* get_value(const hashmap_t* obj, const hashmap_size_t bucket_no, const char* key)
+static hashmap_value_t* get_value(const hashmap_t* obj, const long bucket_no, const char* key)
 {
-  for (hashmap_size_t i = 0; i < obj->bucket_sizes[bucket_no]; i++) {
+  for (long i = 0; i < obj->bucket_sizes[bucket_no]; i++) {
     if (0 == strcmp(key, obj->value_ptrs[bucket_no][i]->key)) {
       return obj->value_ptrs[bucket_no][i];
     }
@@ -46,7 +58,7 @@ static hashmap_value_t* get_value(const hashmap_t* obj, const hashmap_size_t buc
 void* hashmap_get(hashmap_t* obj, char* key)
 {
   uint32_t key_hash = hash_key(key);
-  hashmap_size_t bucket_no = key_hash % obj->size;
+  long bucket_no = key_hash % obj->size;
   hashmap_value_t* value_holder = get_value(obj, bucket_no, key);
 
   if (value_holder) {
@@ -62,7 +74,7 @@ void* hashmap_get(hashmap_t* obj, char* key)
 void* hashmap_set(hashmap_t* obj, char* key, void* value_ptr)
 {
   uint32_t key_hash = hash_key(key);
-  hashmap_size_t bucket_no = key_hash % obj->size;
+  long bucket_no = key_hash % obj->size;
   hashmap_value_t* value_holder = get_value(obj, bucket_no, key);
 
   if (value_holder) {
@@ -93,7 +105,7 @@ void* hashmap_set(hashmap_t* obj, char* key, void* value_ptr)
 void* hashmap_del(hashmap_t* obj, char* key)
 {
   uint32_t key_hash = hash_key(key);
-  hashmap_size_t bucket_no = key_hash % obj->size;
+  long bucket_no = key_hash % obj->size;
   hashmap_value_t* value_holder = get_value(obj, bucket_no, key);
 
   if (value_holder == NULL) {
@@ -105,6 +117,44 @@ void* hashmap_del(hashmap_t* obj, char* key)
   // TODO remove the value + resize the array
 
   return removed_value;
+}
+
+unsigned int hashmap_count_keys(hashmap_t* obj)
+{
+  unsigned int count = 0;
+
+  for (int bucket_no = 0; bucket_no < obj->size; bucket_no++) {
+    count += obj->bucket_sizes[bucket_no];
+  }
+
+  return count;
+}
+
+char** hashmap_get_keys(hashmap_t* obj)
+{
+  char** ptr_list = malloc(hashmap_count_keys(obj) * sizeof(char*));
+
+  int key_i = 0;
+  for (long bucket_no = 0; bucket_no < obj->size; bucket_no++) {
+    for (int i = 0; i < obj->bucket_sizes[bucket_no]; i++) {
+      unsigned int key_len = strlen(obj->value_ptrs[bucket_no][i]->key);
+      ptr_list[key_i] = malloc(key_len + 1);
+      *ptr_list[key_i] = '\0';
+      strncat(ptr_list[key_i], obj->value_ptrs[bucket_no][i]->key, key_len);
+      key_i++;
+    }
+  }
+
+  return ptr_list;
+}
+
+double hashmap_get_load_factor(hashmap_t* obj)
+{
+  int used_buckets = 0;
+  for (long i = 0; i < obj->size; i++) {
+    used_buckets += obj->bucket_sizes[i] > 0 ? 1 : 0;
+  }
+  return used_buckets / (double)obj->size;
 }
 
 
@@ -141,6 +191,35 @@ int main()
   printf("another key (old value): pointer = %p, value = %s\n", replaced, replaced);
   printf("another key (replaced): pointer = %p, value = %d\n", hashmap_get(hashmap, "another key"), *(int*) hashmap_get(hashmap, "another key"));
 
+  printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
+
+  srand(time(NULL));
+  for (int i = 0; i < 10000; i++) {
+    char* key = malloc(20 * sizeof(char));
+    sprintf(key, "key-%d", i);
+    int* value = malloc(sizeof(int));
+    *value = rand();
+
+    if (i % 1000 == 0) {
+      printf("key count = %d, load factor = %f\n", hashmap_count_keys(hashmap), hashmap_get_load_factor(hashmap));    }
+
+    hashmap_set(hashmap, key, value);
+  }
+
+  unsigned long key_count = hashmap_count_keys(hashmap);
+
+  printf("key count = %d\n", key_count);
+  printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
+
+  // char** keys = hashmap_get_keys(hashmap);
+
+  // for (long i = 0; i < key_count; i++) {
+  //   printf("%s ", keys[i]);
+  // }
+  // printf("\n");
+
+
+  hashmap = hashmap_free(hashmap);
 
   // print_hash("");
   // print_hash("hello, world");
