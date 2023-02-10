@@ -12,7 +12,7 @@ typedef struct {
 typedef struct {
   long size;
   long* bucket_sizes;
-  hashmap_value_t*** value_ptrs;
+  hashmap_value_t** bucket_values;
 } hashmap_t;
 
 hashmap_t* hashmap_create();
