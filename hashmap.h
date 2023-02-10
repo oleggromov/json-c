@@ -13,8 +13,8 @@ typedef struct {
 
 typedef struct {
   hashmap_size_t size;
-  hashmap_size_t* bucket_sizes;
-  hashmap_value_t** bucket_values;
+  hashmap_size_t* sizes;
+  hashmap_value_t** values;
 } hashmap_t;
 
 hashmap_t* hashmap_create();
