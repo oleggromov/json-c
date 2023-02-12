@@ -58,3 +58,15 @@ void dynarray_append(dynarray_t* arr, void* value)
 {
   dynarray_set(arr, arr->len, value);
 }
+
+void* dynarray_pop(dynarray_t* arr)
+{
+  if (arr->len == 0) {
+    die("dynarray: length is 0, nothing to pop");
+  }
+
+  void* value_ptr = arr->_arr[arr->len - 1];
+  arr->_arr[arr->len - 1] = NULL;
+  arr->len--;
+  return value_ptr;
+}

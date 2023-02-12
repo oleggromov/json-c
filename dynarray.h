@@ -15,5 +15,6 @@ void dynarray_free(dynarray_t** arr);
 void* dynarray_set(dynarray_t* arr, size_t index, void* value);
 void* dynarray_get(dynarray_t* arr, size_t index);
 void dynarray_append(dynarray_t* arr, void* value);
+void* dynarray_pop(dynarray_t* arr);
 
 #endif
