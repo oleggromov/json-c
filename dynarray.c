@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "dynarray.h"
 #include "util.h"
@@ -24,7 +25,22 @@ void dynarray_free(dynarray_t** arr)
 static void _assert_index(dynarray_t* arr, size_t index)
 {
   if (index > arr->_capacity - 1 || index < 0) {
-    die("dynarray: index out of bounds");
+    die("dynarray: index %d out of bounds (capacity=%d)", index, arr->_capacity);
+  }
+}
+
+static void _grow_if_needed(dynarray_t* arr)
+{
+  if (arr->len + 1 > arr->_capacity) {
+    size_t old_size = arr->_capacity;
+
+    arr->_capacity += SIZE_INC;
+    arr->_arr = realloc(arr->_arr, sizeof(void*) * arr->_capacity);
+    memset(arr->_arr + old_size, 0, sizeof(void*) * SIZE_INC); // important for sparse arrays
+
+    if (arr->_arr == NULL) {
+      die("dynarray: couldn't reallocate memory");
+    }
   }
 }
 
@@ -33,14 +49,7 @@ static void _assert_index(dynarray_t* arr, size_t index)
 // - void* to a previous value if replaced
 void* dynarray_set(dynarray_t* arr, size_t index, void* value)
 {
-  // grow if needed
-  if (arr->len + 1 > arr->_capacity) {
-    arr->_capacity += SIZE_INC;
-    arr->_arr = realloc(arr->_arr, sizeof(void*) * arr->_capacity);
-    if (arr->_arr == NULL) {
-      die("dynarray: couldn't reallocate memory");
-    }
-  }
+  _grow_if_needed(arr);
 
   void* old_value_ptr = dynarray_get(arr, index);
   arr->_arr[index] = value;
