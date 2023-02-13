@@ -59,7 +59,12 @@ void dynarray_append(dynarray_t* arr, void* value)
   dynarray_set(arr, arr->len, value);
 }
 
-void* dynarray_pop(dynarray_t* arr)
+void* dynarray_get_top(dynarray_t* arr)
+{
+  return dynarray_get(arr, arr->len - 1);
+}
+
+void* dynarray_remove_top(dynarray_t* arr)
 {
   if (arr->len == 0) {
     die("dynarray: length is 0, nothing to pop");
