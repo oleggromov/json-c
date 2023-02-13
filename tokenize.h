@@ -2,12 +2,20 @@
 #define TOKENIZE_H
 
 typedef enum {
-  Curly, Uncurly, Square, Unsquare, Colon, Comma, String, Double, Long, Bool, Null
+  TokenCurly, TokenUncurly, TokenSquare, TokenUnsquare,
+  TokenColon, TokenComma,
+  TokenString, TokenDouble, TokenLong, TokenBool, TokenNull,
 } token_type_t;
 
 typedef struct {
   token_type_t type;
   void* value_ptr;
+
+  // TODO add extra info
+  size_t _pos_start;
+  size_t _pos_end;
+  char* _orig_str;
+  size_t _orig_len;
 } token_t;
 
 typedef unsigned long long token_length_t;

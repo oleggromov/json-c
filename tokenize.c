@@ -18,31 +18,31 @@ token_list_t* tokenize(char* str)
 
     switch (*str) {
       case '{':
-        append_token(result, Curly);
+        append_token(result, TokenCurly);
         break;
 
       case '}':
-        append_token(result, Uncurly);
+        append_token(result, TokenUncurly);
         break;
 
       case '[':
-        append_token(result, Square);
+        append_token(result, TokenSquare);
         break;
 
       case ']':
-        append_token(result, Unsquare);
+        append_token(result, TokenUnsquare);
         break;
 
       case ':':
-        append_token(result, Colon);
+        append_token(result, TokenColon);
         break;
 
       case ',':
-        append_token(result, Comma);
+        append_token(result, TokenComma);
         break;
 
       case '\"':
-        append_token(result, String);
+        append_token(result, TokenString);
         read_string(&str, (char**) &result->tokens[result->length - 1].value_ptr);
         break;
 
@@ -58,7 +58,7 @@ token_list_t* tokenize(char* str)
       case '7':
       case '8':
       case '9':
-        append_token(result, Long);
+        append_token(result, TokenLong);
         read_number(&str, &result->tokens[result->length - 1].value_ptr, &result->tokens[result->length - 1].type);
         break;
 
@@ -70,7 +70,7 @@ token_list_t* tokenize(char* str)
           die(error_buf);
         }
 
-        append_token(result, Bool);
+        append_token(result, TokenBool);
         result->tokens[result->length - 1].value_ptr = bool_value_ptr;
         break;
 
@@ -81,7 +81,7 @@ token_list_t* tokenize(char* str)
           die(error_buf);
         }
 
-        append_token(result, Null);
+        append_token(result, TokenNull);
         break;
 
       case ' ':
@@ -119,7 +119,7 @@ void free_token_list(token_list_t* token_list)
   free(token_list->tokens);
 }
 
-// TODO allocate more in advance
+// TODO allocate more in advance (estimate from the input length)
 static token_t* reallocate_tokens(token_t* tokens, token_length_t length)
 {
   void* ptr = realloc(tokens, length * sizeof(token_t));
@@ -219,10 +219,10 @@ static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* ty
         *read_number_ptr = malloc(seen_period ? sizeof(double) : sizeof(long));
         if (seen_period) {
           *(double*)*read_number_ptr = strtod(start, NULL);
-          *type_ptr = Double;
+          *type_ptr = TokenDouble;
         } else {
           *(long*)*read_number_ptr = strtol(start, NULL, 10);
-          *type_ptr = Long;
+          *type_ptr = TokenLong;
         }
 
         return;
@@ -272,38 +272,38 @@ void print_token_list(token_t* token)
 
   switch (token->type)
   {
-    case Curly:
+    case TokenCurly:
       printf("<CURLY> ");
       break;
-    case Uncurly:
+    case TokenUncurly:
       printf("<UNCURLY> ");
       break;
-    case Square:
+    case TokenSquare:
       printf("<SQUARE> ");
       break;
-    case Unsquare:
+    case TokenUnsquare:
       printf("<UNSQUARE> ");
       break;
-    case Colon:
+    case TokenColon:
       printf("<COLON> ");
       break;
-    case Comma:
+    case TokenComma:
       printf("<COMMA> ");
       break;
-    case String:
+    case TokenString:
       strncpy(buffer, (char*) token->value_ptr, PRINT_BUFFER_SIZE - 1);
       printf("<STRING \"%s%s\"> ", buffer, strlen((char*) token->value_ptr) > PRINT_BUFFER_SIZE - 1 ? "..." : "");
       break;
-    case Double:
+    case TokenDouble:
       printf("<DOUBLE %f> ", *((double*) token->value_ptr));
       break;
-    case Long:
+    case TokenLong:
       printf("<LONG %d> ", *((int*) token->value_ptr));
       break;
-    case Bool:
+    case TokenBool:
       printf("<BOOL %d> ", *((int*) token->value_ptr));
       break;
-    case Null:
+    case TokenNull:
       printf("<NULL> ");
       break;
   }
