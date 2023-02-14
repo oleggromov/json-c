@@ -7,6 +7,18 @@ static void print_stat(dynarray_t* arr)
   printf("len = %zu, capacity = %zu\n", arr->len, arr->_capacity);
 }
 
+static void print_items_int(dynarray_t* arr)
+{
+  for (size_t i = 0; i < arr->len; i++) {
+    int* value = dynarray_get(arr, i);
+    if (value) {
+      printf("[%d] = %d\n", (int) i, *value);
+    } else {
+      printf("[%d] = NULL\n", (int) i);
+    }
+  }
+}
+
 int main()
 {
   dynarray_t* array = dynarray_create();
@@ -39,5 +51,32 @@ int main()
   }
   print_stat(array);
 
+  printf("\n\ndynarray 2\n");
+  dynarray_t* arr2 = dynarray_create();
+  for (int j = 0; j < 10; j += 2) {
+    dynarray_set(arr2, j, &j);
+  }
+  print_stat(arr2);
+  print_items_int(arr2);
+  printf("[9] = %d\n", dynarray_get(arr2, 9));
+  printf("[10] = %d\n", dynarray_get(arr2, 10));
+
+  int* item = dynarray_cut(arr2, 0);
+  printf("cut item = %d\n", *item);
+  print_stat(arr2);
+  print_items_int(arr2);
+  printf("[8] = %d\n", dynarray_get(arr2, 8));
+  printf("[9] = %d\n", dynarray_get(arr2, 9));
+  printf("[10] = %d\n", dynarray_get(arr2, 10));
+
+  printf("\n\ndynarray 3\n");
+  dynarray_t* arr3 = dynarray_create();
+  for (int j = 0; j < 10; j++) {
+    dynarray_set(arr3, j, &j);
+  }
+  print_stat(arr3);
+  print_items_int(arr3);
+
   printf("&array[67] = %p\n", dynarray_get(array, 128));
+
 }

@@ -53,7 +53,7 @@ void* dynarray_set(dynarray_t* arr, size_t index, void* value)
 
   void* old_value_ptr = dynarray_get(arr, index);
   arr->_arr[index] = value;
-  arr->len += 1;
+  arr->len = index > arr->len ? index + 1: arr->len + 1; // when array is sparse
   return old_value_ptr;
 }
 
@@ -61,6 +61,25 @@ void* dynarray_get(dynarray_t* arr, size_t index)
 {
   _assert_index(arr, index);
   return arr->_arr[index];
+}
+
+// Cuts the value at index from array1
+// Returns a pointer to the deleted item (may be void*)
+void* dynarray_cut(dynarray_t* arr, size_t index)
+{
+  void *old_value_ptr = dynarray_get(arr, index);
+
+  // index = 1, len = 5
+  // {1, 2, 3, 4, 5} => // {1, 3, 4, 5}
+  size_t move_items = arr->len - index; // should be -1 but +1 item is to ensure zeroing
+  memmove(
+    arr->_arr + index * sizeof(void*),
+    arr->_arr + index * sizeof(void*) + 1,
+    move_items * sizeof(void*)
+  );
+  arr->len = arr->len - 1;
+
+  return old_value_ptr;
 }
 
 void dynarray_append(dynarray_t* arr, void* value)
