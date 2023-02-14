@@ -35,7 +35,7 @@ int main()
 
   printf("Popping 3 items...\n");
   for (i = 0; i < 3; i++) {
-    printf("array[%zu] = %d\n", array->len - 1, *(int*) dynarray_pop(array));
+    printf("array[%zu] = %d\n", array->len - 1, *(int*) dynarray_remove_top(array));
   }
   print_stat(array);
 
