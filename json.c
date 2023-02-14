@@ -8,7 +8,7 @@
 // TODO fix "falsenull" or "truefalsefalse" cases
 char* SAMPLE_INPUT = "{\"string_1\": \"a not so long string value\",\"object_1\": {\"number_float\": 3.14,\"number_int\": 327681, \"negative_number\": -0.231}\n, \"bool_true\": true, \"bool_false\": false, \"number\": 2.88, \"inner beauty\": [1, 2, 3, null]}";
 
-char* NO_ARRAY = "{\"string_1\": \"a not so long string value\",\"object_1\": {\"number_float\": 3.14,\"number_int\": 327681, \"negative_number\": -0.231}\n, \"bool_true\": true, \"bool_false\": false, \"number\": 2.88, },";
+char* NO_ARRAY = "{\"string_1\": \"a not so long string value\",\"object_1\": {\"number_float\": 3.14,\"number_int\": 327681, \"negative_number\": -0.231}\n, \"bool_true\": true, \"bool_false\": false, \"number\": 2.88 }";
 
 char* SIMPLE = "{\"key_number\": 25.0303030303, \"key_string\": \"string\", \"boolean\": false, \"long\": 9200000 }";
 
@@ -33,7 +33,7 @@ int main()
   }
 
   node_t* root = parse(tokens);
-  printf("node root pointer = %p\n", root);
+  printf("node root pointer = %p\n", (void*) root);
 
   // char* serialized = serialize(root);
 
