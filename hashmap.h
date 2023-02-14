@@ -3,6 +3,11 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include "murmur3_32.h"
 
 typedef unsigned long hashmap_size_t;
 
