@@ -16,8 +16,6 @@ typedef struct {
 node_t* parse(token_list_t* token_list);
 void free_node_list(node_t* node);
 
-char* serialize(node_t* node);
-
 // Object
 // - keys:
 // -
