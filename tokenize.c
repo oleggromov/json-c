@@ -5,6 +5,20 @@
 #include "tokenize.h"
 #include "util.h"
 
+
+// Internal functions
+static token_list_t* allocate_token_list();
+static token_t* reallocate_tokens(token_t* tokens, token_length_t length);
+
+static void append_token(token_list_t* token_list, token_type_t token_type);
+
+static void read_string(char** str_ptr, char** read_str_ptr);
+static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* type_ptr);
+static int* read_bool(char** str_ptr);
+static int read_null(char** str_ptr);
+
+// TODO:
+// - testcase: fill memory with garbage and check what tokenize returns
 token_list_t* tokenize(char* str)
 {
   token_list_t* result = allocate_token_list();
@@ -12,7 +26,7 @@ token_list_t* tokenize(char* str)
   result->length = 0;
 
   while (*str) {
-    char error_buf[128];
+    char error_buf[128] = {0};
     int* bool_value_ptr;
     int null_result;
 
@@ -295,7 +309,7 @@ void print_token_list(token_t* token)
       printf("<STRING \"%s%s\"> ", buffer, strlen((char*) token->value_ptr) > PRINT_BUFFER_SIZE - 1 ? "..." : "");
       break;
     case TokenDouble:
-      printf("<DOUBLE %f> ", *((double*) token->value_ptr));
+      printf("<DOUBLE %g> ", *((double*) token->value_ptr));
       break;
     case TokenLong:
       printf("<LONG %d> ", *((int*) token->value_ptr));
