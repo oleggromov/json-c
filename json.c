@@ -5,6 +5,8 @@
 #include "tokenize.h"
 #include "parse.h"
 
+#include "dynarray.h"
+
 // TODO fix "falsenull" or "truefalsefalse" cases
 char* SAMPLE_INPUT = "{\"string_1\": \"a not so long string value\",\"object_1\": {\"number_float\": 3.14,\"number_int\": 327681, \"negative_number\": -0.231}\n, \"bool_true\": true, \"bool_false\": false, \"number\": 2.88, \"inner beauty\": [1, 2, 3, null]}";
 
@@ -21,7 +23,8 @@ char* SIMPLE_ARRAY = "[1,2,null,false,\"an example string\"]";
 // 5. write it back to fs
 int main()
 {
-  token_list_t* tokens = tokenize(NO_ARRAY);
+  char* LOCAL_INPUT = SIMPLE_ARRAY;
+  token_list_t* tokens = tokenize(LOCAL_INPUT);
 
   printf("\n\ntoken list length = %llu\n", tokens->length);
   if (tokens->length > 0) {
@@ -32,8 +35,15 @@ int main()
     printf("\n");
   }
 
-  node_t* root = parse(tokens);
+  node_t* root = parse(tokens, LOCAL_INPUT);
   printf("node root pointer = %p\n", (void*) root);
+
+  // SIMPLE_ARRAY
+  printf("root array[0] = %d\n", *(int*) ((node_t*) dynarray_get(root->value, 0))->value);
+  printf("root array[1] = %d\n", *(int*) ((node_t*) dynarray_get(root->value, 1))->value);
+  printf("root array[2] = %s\n", ((node_t*) dynarray_get(root->value, 2))->type == NodeNull ? "null" : "ERR!");
+  printf("root array[3] = %d\n", ((node_t*) dynarray_get(root->value, 3))->type == NodeBool ? (int*) ((node_t*) dynarray_get(root->value, 2))->value : -1);
+  printf("root array[4] = %s\n", ((node_t*) dynarray_get(root->value, 4))->value);
 
   // char* serialized = serialize(root);
 
