@@ -17,7 +17,7 @@ char* SIMPLE = "{\"key_number\": 25.0303030303, \"key_string\": \"string\", \"bo
 
 char* SIMPLE_ARRAY = "[1,2,null,false,\"an example string\"]";
 
-char* WITH_ARRAY = "{\"string_1\": \"a not so long string value\",\"object_1\": {\"number_float\": 3.14,\"number_int\": 327681, \"negative_number\": -0.231}\n, \"bool_true\": true, \"bool_false\": false, \"number\": 2.88, \"nested\": { \"arr\": [1,2,null,false,\"an example string\"] } }";
+char* WITH_ARRAY = "{\"string_1\": \"a not so long string value\",\"object_1\": {\"number_float\": 3.14,\"number_int\": 327681, \"negative_number\": -0.231}\n, \"bool_true\": true, \"bool_false\": falsefalse, \"number\": 2.88, \"nested\": { \"arr\": [1,2,null,false,\"an example string\"] } }";
 
 // 1. read file
 // 2. split it into tokens
@@ -34,7 +34,7 @@ int main()
   if (tokens->length > 0) {
     printf("TOKENS:\n\n");
     for (token_length_t i = 0; i < tokens->length; i++) {
-      print_token_list(&tokens->tokens[i]);
+      DEBUG_print_token(&tokens->tokens[i]);
     }
     printf("\n");
   }

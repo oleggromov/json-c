@@ -26,6 +26,6 @@ typedef struct {
 token_list_t* tokenize(const char* str);
 void free_token_list(token_list_t* token_list);
 
-void print_token_list(token_t* token);
+void DEBUG_print_token(token_t* token);
 
 #endif //TOKENIZE_H

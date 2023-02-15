@@ -18,6 +18,7 @@ static int* read_bool(char** str_ptr);
 static int read_null(char** str_ptr);
 
 // TODO:
+// - should the tokenizer know about delimiters (",}]") after values? (falsenull or "string""string" and other things)
 // - testcase: fill memory with garbage and check what tokenize returns
 token_list_t* tokenize(const char* str)
 {
@@ -290,7 +291,7 @@ static int read_null(char **str_ptr)
   return -1;
 }
 
-void print_token_list(token_t* token)
+void DEBUG_print_token(token_t* token)
 {
   const int PRINT_BUFFER_SIZE = 100;
   char buffer[PRINT_BUFFER_SIZE];
