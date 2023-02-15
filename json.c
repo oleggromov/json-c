@@ -4,6 +4,7 @@
 #include "hashmap.h"
 #include "tokenize.h"
 #include "parse.h"
+#include "serialize.h"
 
 #include "dynarray.h"
 
@@ -23,8 +24,9 @@ char* SIMPLE_ARRAY = "[1,2,null,false,\"an example string\"]";
 // 5. write it back to fs
 int main()
 {
-  char* LOCAL_INPUT = SIMPLE_ARRAY;
-  token_list_t* tokens = tokenize(LOCAL_INPUT);
+  char* LOCAL_INPUT = SIMPLE;
+  // token_list_t* tokens = tokenize(LOCAL_INPUT);
+  token_list_t* tokens = tokenize("{\"hello\": \"world\", \"test\": {\"key\": 1, \"another\": null }, \"arr\":[1,2,3,null,5,false,\"str\",244.33, -1, 55]}");
 
   printf("\n\ntoken list length = %llu\n", tokens->length);
   if (tokens->length > 0) {
@@ -36,19 +38,18 @@ int main()
   }
 
   node_t* root = parse(tokens, LOCAL_INPUT);
-  printf("node root pointer = %p\n", (void*) root);
+  // printf("node root pointer = %p\n", (void*) root);
 
   // SIMPLE_ARRAY
-  printf("root array[0] = %d\n", *(int*) ((node_t*) dynarray_get(root->value, 0))->value);
-  printf("root array[1] = %d\n", *(int*) ((node_t*) dynarray_get(root->value, 1))->value);
-  printf("root array[2] = %s\n", ((node_t*) dynarray_get(root->value, 2))->type == NodeNull ? "null" : "ERR!");
-  printf("root array[3] = %d\n", ((node_t*) dynarray_get(root->value, 3))->type == NodeBool ? (int*) ((node_t*) dynarray_get(root->value, 2))->value : -1);
-  printf("root array[4] = %s\n", ((node_t*) dynarray_get(root->value, 4))->value);
+  // printf("root array[0] = %d\n", *(int*) ((node_t*) dynarray_get(root->value, 0))->value);
+  // printf("root array[1] = %d\n", *(int*) ((node_t*) dynarray_get(root->value, 1))->value);
+  // printf("root array[2] = %s\n", ((node_t*) dynarray_get(root->value, 2))->type == NodeNull ? "null" : "ERR!");
+  // printf("root array[3] = %d\n", ((node_t*) dynarray_get(root->value, 3))->type == NodeBool ? (int*) ((node_t*) dynarray_get(root->value, 2))->value : -1);
+  // printf("root array[4] = %s\n", ((node_t*) dynarray_get(root->value, 4))->value);
 
-  // char* serialized = serialize(root);
-
-  // printf("serialized:\n");
-  // printf("%s\n", serialized);
+  char* serialized = serialize(root);
+  printf("serialized:\n");
+  printf("%s\n", serialized);
 
   return EXIT_SUCCESS;
 }
