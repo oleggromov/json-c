@@ -1,3 +1,4 @@
+#include "alloca.h"
 #include "serialize.h"
 
 typedef struct {
@@ -24,8 +25,22 @@ static void append_buf_str(serialize_state_t* state, char* str, unsigned long st
   state->buf_pos += str_len;
 }
 
+static void append_buf_indent(serialize_state_t* state, int depth)
+{
+  if (depth > 0) {
+    char* indent_str = alloca(sizeof(char) * depth);
+    memset(indent_str, '\t', depth);
+    append_buf_str(state, indent_str, depth);
+  }
+}
 
-static void step(serialize_state_t* state, node_t* node, int depth)
+static void append_buf_str_indented(serialize_state_t* state, char* str, unsigned long str_len, unsigned int depth) {
+  append_buf_str(state, "\n", 1);
+  append_buf_indent(state, depth);
+  append_buf_str(state, str, str_len);
+}
+
+static void step(serialize_state_t* state, node_t* node, unsigned int depth)
 {
   size_t arr_len = -1;
   size_t obj_key_count = -1;
@@ -40,7 +55,7 @@ static void step(serialize_state_t* state, node_t* node, int depth)
       obj_keys = hashmap_get_keys(node->value);
 
       for (size_t i = 0; i < obj_key_count; i++) {
-        append_buf_str(state, "\"", 1);
+        append_buf_str_indented(state, "\"", 1, depth + 1);
         append_buf_str(state, obj_keys[i], strlen(obj_keys[i]));
         append_buf_str(state, "\"", 1);
         append_buf_str(state, ": ", 2);
@@ -52,18 +67,16 @@ static void step(serialize_state_t* state, node_t* node, int depth)
         }
       }
 
-      append_buf_str(state, "}", 1);
+      append_buf_str_indented(state, "}", 1, depth);
       break;
 
     case NodeArray:
       append_buf_str(state, "[", 1);
 
       arr_len = ((dynarray_t*) node->value)->len;
-      // printf("depth=%d, type=%d, value=%p, len=%d\n", depth, node->type, node->value, arr_len);
 
       for (size_t i = 0; i < arr_len; i++) {
         node_t* child = dynarray_get(node->value, i);
-        // printf("[%d] child type = %d, value = %p\n", i, child->type, child->value);
 
         step(state, child, depth + 1);
 

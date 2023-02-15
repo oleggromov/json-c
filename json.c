@@ -17,6 +17,8 @@ char* SIMPLE = "{\"key_number\": 25.0303030303, \"key_string\": \"string\", \"bo
 
 char* SIMPLE_ARRAY = "[1,2,null,false,\"an example string\"]";
 
+char* WITH_ARRAY = "{\"string_1\": \"a not so long string value\",\"object_1\": {\"number_float\": 3.14,\"number_int\": 327681, \"negative_number\": -0.231}\n, \"bool_true\": true, \"bool_false\": false, \"number\": 2.88, \"nested\": { \"arr\": [1,2,null,false,\"an example string\"] } }";
+
 // 1. read file
 // 2. split it into tokens
 // 3. parse it into a tree
@@ -24,9 +26,9 @@ char* SIMPLE_ARRAY = "[1,2,null,false,\"an example string\"]";
 // 5. write it back to fs
 int main()
 {
-  char* LOCAL_INPUT = SIMPLE;
-  // token_list_t* tokens = tokenize(LOCAL_INPUT);
-  token_list_t* tokens = tokenize("{\"hello\": \"world\", \"test\": {\"key\": 1, \"another\": null }, \"arr\":[1,2,3,null,5,false,\"str\",244.33, -1, 55]}");
+  char* LOCAL_INPUT = WITH_ARRAY;
+  token_list_t* tokens = tokenize(LOCAL_INPUT);
+  // token_list_t* tokens = tokenize("{\"hello\": \"world\", \"test\": {\"key\": 1, \"another\": null }, \"arr\":[1,2,3,null,5,false,\"str\",244.33, -1, 55]}");
 
   printf("\n\ntoken list length = %llu\n", tokens->length);
   if (tokens->length > 0) {
@@ -48,7 +50,7 @@ int main()
   // printf("root array[4] = %s\n", ((node_t*) dynarray_get(root->value, 4))->value);
 
   char* serialized = serialize(root);
-  printf("serialized:\n");
+  printf("\n\nSERIALIZED:\n");
   printf("%s\n", serialized);
 
   return EXIT_SUCCESS;
