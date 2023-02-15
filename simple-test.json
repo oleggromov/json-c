@@ -1,7 +1,0 @@
-{
-  "string_1": "a not so long string value",
-  "object_1": {
-    "number_float": 0.14,
-    "number_int": 32768
-  }
-}

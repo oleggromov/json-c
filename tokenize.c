@@ -284,6 +284,7 @@ static int* read_bool(char **str_ptr)
 static int read_null(char **str_ptr)
 {
   if (0 == strncmp("null", *str_ptr, 4)) {
+    // TODO: will this potentially cause a buffer overflow?
     *str_ptr += 3;
     return 0;
   }

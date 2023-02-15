@@ -1,0 +1,17 @@
+{
+  "string_1": "a not so long string value",
+  "object_1": {
+    "number_float": 0.14,
+    "number_int": 32768
+  },
+  "array": [
+    {
+      "object": true,
+      "sub_object": {
+        "inner_array": [1, 2, 3, "string"]
+      }
+    },
+    "another string",
+    false
+  ]
+}
