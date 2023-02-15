@@ -12,7 +12,7 @@ typedef struct {
   node_t* root;
   dynarray_t* node_stack;
   token_list_t* token_list;
-  token_length_t next_token;
+  token_length_t token_current;
 } parse_state_t;
 
 static char* _slice_str_dangling_ptr(const char* str, size_t offset, size_t min_len)
@@ -47,268 +47,186 @@ static node_t* _allocate_node(node_type_t type, void* value)
   return node;
 }
 
-static inline token_t* _next_token(parse_state_t* state)
+static inline token_t* _token_current(parse_state_t* state)
 {
-  return &state->token_list->tokens[state->next_token];
+  return &state->token_list->tokens[state->token_current];
 }
 
-static inline void _inc_next_token(parse_state_t* state)
+static inline void _inc_token_current(parse_state_t* state)
 {
-  state->next_token++;
+  // TODO check if it's out of bounds
+  state->token_current++;
 }
 
-static inline void _append_node_object(parse_state_t* state)
+static node_t* _consume_value(parse_state_t* state)
 {
-  dynarray_append(state->node_stack, _allocate_node(NodeObject, hashmap_create()));
-}
+  node_t* node = _allocate_node(0, NULL);
+  token_t* token = _token_current(state);
 
-static inline void _append_node_array(parse_state_t* state)
-{
-  dynarray_append(state->node_stack, _allocate_node(NodeArray, dynarray_create()));
-}
-
-static void _consume_json_start(parse_state_t* state)
-{
-  if (_next_token(state)->type == TokenCurly) {
-    _inc_next_token(state);
-    _append_node_object(state);
-    state->root = dynarray_get_top(state->node_stack);
-    return;
-  }
-
-  if (_next_token(state)->type == TokenSquare) {
-    _inc_next_token(state);
-    _append_node_array(state);
-    state->root = dynarray_get_top(state->node_stack);
-    return;
-  }
-
-  die("parse: expected { or [ at JSON start"); // First token should be { or [
-}
-
-static void _consume_object_key_value(parse_state_t* state, const char* input_str)
-{
-  char* key;
-  size_t value_len;
-  node_t* value_node;
-  hashmap_t* hashmap_current = ((node_t*) dynarray_get_top(state->node_stack))->value;
-
-  if (_next_token(state)->type == TokenString) {
-    // TODO this is potentially freed by freeing token_list_t
-    key = _next_token(state)->value_ptr;
-    _inc_next_token(state);
-  } else {
-    die("parse: expected string as an object key");
-  }
-
-  if (_next_token(state)->type == TokenColon) {
-    _inc_next_token(state);
-  } else {
-    die(
-      "parse: expected : after an object key\n%s",
-      _slice_str_dangling_ptr(input_str, _next_token(state)->_pos_start, _next_token(state)->_pos_end - _next_token(state)->_pos_start)
-    );
-  }
-
-  // TODO who frees this pointer?
-  value_node = _allocate_node(-1, NULL);
-
-  // TODO who frees these pointers?
-  switch(_next_token(state)->type) {
-    // case TokenUncurly:
-    //   dynarray_remove_top(state->node_stack);
-    //   _inc_next_token(state);
-
+  switch (token->type) {
+    // Nested object or array
     case TokenCurly:
-      _inc_next_token(state);
-      _append_node_object(state);
-      value_node->value = dynarray_get_top(state->node_stack);
-      hashmap_set(hashmap_current, key, value_node);
-      return; // don't consume a dangling comma
+      node->type = NodeObject;
+      node->value = hashmap_create();
+      dynarray_append(state->node_stack, node);
+      _inc_token_current(state);
+      return node; // dangling comma isn't allowed
 
     case TokenSquare:
-      _inc_next_token(state);
-      _append_node_array(state);
-      value_node->value = dynarray_get_top(state->node_stack);
-      hashmap_set(hashmap_current, key, value_node);
-      return; // don't consume a dangling comma
+      node->type = NodeArray;
+      node->value = dynarray_create();
+      dynarray_append(state->node_stack, node);
+      _inc_token_current(state);
+      return node; // dangling comma isn't allowed
 
+    // Primitive values
     case TokenString:
-      value_len = strlen(_next_token(state)->value_ptr);
-      value_node->type = NodeString;
-      value_node->value = malloc(value_len * sizeof(char*));
-      strncpy(value_node->value, _next_token(state)->value_ptr, value_len);
-      _inc_next_token(state);
+      node->type = NodeString;
+      node->value = strdup(token->value_ptr);
       break;
 
     case TokenLong:
-      value_node->type = NodeLong;
-      value_node->value = malloc(sizeof(long));
-      *(long*) value_node->value = *(long*) _next_token(state)->value_ptr;
-      _inc_next_token(state);
+      node->type = NodeLong;
+      node->value = malloc(sizeof(long));
+      *(long*) node->value = *(long*) token->value_ptr;
       break;
 
     case TokenDouble:
-      value_node->type = NodeDouble;
-      value_node->value = malloc(sizeof(double));
-      *(double*) value_node->value = *(double*) _next_token(state)->value_ptr;
-      _inc_next_token(state);
+      node->type = NodeDouble;
+      node->value = malloc(sizeof(double));
+      *(double*) node->value = *(double*) token->value_ptr;
       break;
 
     case TokenBool:
-      value_node->type = NodeBool;
-      value_node->value = malloc(sizeof(int));
-      *(int*) value_node->value = *(int*) _next_token(state)->value_ptr;
-      _inc_next_token(state);
+      node->type = NodeBool;
+      node->value = malloc(sizeof(int));
+      *(int*) node->value = *(int*) token->value_ptr;
       break;
 
     case TokenNull:
-      value_node->type = NodeNull;
-      _inc_next_token(state);
+      node->type = NodeNull;
       break;
 
     default:
-      free(value_node);
-      die("parse: unexpected token as an object key value");
+      // TODO better message
+      die("parse: unexpected token at %d", token->_pos_start);
   }
 
-  hashmap_set(hashmap_current, key, value_node);
+  _inc_token_current(state);
 
-  // dangling comma is allowed
-  if (_next_token(state)->type == TokenComma) {
-    _inc_next_token(state);
-  }
-}
-
-static void _consume_array_values(parse_state_t* state) {
-  size_t value_len;
-  // TODO who frees this pointer?
-  node_t* value_node = _allocate_node(-1, NULL);
-  dynarray_t* array_current = ((node_t*) dynarray_get_top(state->node_stack))->value;
-
-  switch (_next_token(state)->type) {
-    case TokenCurly:
-      _inc_next_token(state);
-      _append_node_object(state);
-      value_node->value = dynarray_get_top(state->node_stack);
-      dynarray_append(state->node_stack, value_node);
-      return; // don't consume a dangling comma
-
-    case TokenSquare:
-      _inc_next_token(state);
-      _append_node_array(state);
-      value_node->value = dynarray_get_top(state->node_stack);
-      dynarray_append(state->node_stack, value_node);
-      return; // don't consume dangling comma
-
-    case TokenString:
-      value_len = strlen(_next_token(state)->value_ptr);
-      value_node->type = NodeString;
-      value_node->value = malloc(value_len * sizeof(char*));
-      strncpy(value_node->value, _next_token(state)->value_ptr, value_len);
-      _inc_next_token(state);
-      break;
-
-    case TokenLong:
-      value_node->type = NodeLong;
-      value_node->value = malloc(sizeof(long));
-      *(long*) value_node->value = *(long*) _next_token(state)->value_ptr;
-      _inc_next_token(state);
-      break;
-
-    case TokenDouble:
-      value_node->type = NodeDouble;
-      value_node->value = malloc(sizeof(double));
-      *(double*) value_node->value = *(double*) _next_token(state)->value_ptr;
-      _inc_next_token(state);
-      break;
-
-    case TokenBool:
-      value_node->type = NodeBool;
-      value_node->value = malloc(sizeof(int));
-      *(int*) value_node->value = *(int*) _next_token(state)->value_ptr;
-      _inc_next_token(state);
-      break;
-
-    case TokenNull:
-      value_node->type = NodeNull;
-      _inc_next_token(state);
-      break;
-
-    default:
-      free(value_node);
-      die("parse: unexpected token as an array value");
+  // dangling comma is allowed after a value
+  if (_token_current(state)->type == TokenComma) {
+    _inc_token_current(state);
   }
 
-  dynarray_append(array_current, value_node);
-
-  if (_next_token(state)->type == TokenComma) {
-    _inc_next_token(state);
-  }
+  return node;
 }
 
 node_t* parse(token_list_t* token_list, const char* input_str)
 {
   parse_state_t state = {
     .root = NULL,
-    .node_stack = NULL,
-    .next_token = 0,
+    .node_stack = dynarray_create(),
+    .token_current = 0,
     .token_list = token_list
   };
 
-  if (token_list->length == 0) {
-    return NULL;
-  }
+  while (state.token_current < state.token_list->length) {
 
-  state.node_stack = dynarray_create();
+    node_t* node_top = NULL;
 
-  while (state.next_token < state.token_list->length) {
-    if (state.next_token == 0) {
-      _consume_json_start(&state);
-      continue;
+    if (state.token_current == 0) {
+      if (_token_current(&state)->type == TokenCurly || _token_current(&state)->type == TokenSquare) {
+        if (_token_current(&state)->type == TokenCurly) {
+          dynarray_append(state.node_stack, _allocate_node(NodeObject, hashmap_create()));
+        } else if (_token_current(&state)->type == TokenSquare) {
+          dynarray_append(state.node_stack, _allocate_node(NodeArray, dynarray_create()));
+        }
+
+        _inc_token_current(&state);
+        state.root = dynarray_get_top(state.node_stack);
+        continue;
+      }
+
+      die("parse: expected { or [ at JSON start"); // First token should be { or [
     }
 
     if (state.node_stack->len == 0) {
       die(
-        "parse: unexpected token at %lu\n%s",
-        _next_token(&state)->_pos_start,
-        _slice_str_dangling_ptr(input_str, _next_token(&state)->_pos_start, _next_token(&state)->_pos_end - _next_token(&state)->_pos_start)
+        "parse: unexpected token at %lu\n",
+        // "parse: unexpected token at %lu\n%s",
+        _token_current(&state)->_pos_start
+        // _slice_str_dangling_ptr(input_str, _next_token(&state)->_pos_start, _next_token(&state)->_pos_end - _next_token(&state)->_pos_start)
       );
     }
 
-    node_t* node_current = dynarray_get_top(state.node_stack);
+    node_top = dynarray_get_top(state.node_stack);
 
-    // Consuming object keys
-    if (node_current->type == NodeObject) {
-      if (_next_token(&state)->type == TokenUncurly) {
+    // Consuming object key-value pairs
+    if (node_top->type == NodeObject) {
+      char* key = NULL;
+
+      // Closing the current object
+      if (_token_current(&state)->type == TokenUncurly) {
         dynarray_remove_top(state.node_stack);
-        _inc_next_token(&state);
+        _inc_token_current(&state);
 
-        if (state.node_stack->len > 0 && _next_token(&state)->type == TokenComma) {
-          _inc_next_token(&state);
+        // Dangling comma when it's not the last object
+        if (state.node_stack->len > 0 && _token_current(&state)->type == TokenComma) {
+          _inc_token_current(&state);
         }
 
         continue;
       }
 
-      _consume_object_key_value(&state, input_str);
+      // Key
+      if (_token_current(&state)->type == TokenString) {
+        key = _token_current(&state)->value_ptr; // Hashmap internally makes a copy of the key
+        _inc_token_current(&state);
+      } else {
+        die("parse: expected string as an object key");
+      }
+
+      // :
+      if (_token_current(&state)->type == TokenColon) {
+        _inc_token_current(&state);
+      } else {
+        die(
+          "parse: expected : after an object key\n%s",
+          _slice_str_dangling_ptr(input_str, _token_current(&state)->_pos_start, _token_current(&state)->_pos_end - _token_current(&state)->_pos_start)
+        );
+      }
+
+      // And a value
+      node_t* new_node = _consume_value(&state);
+
+      // Finally, adding new node as a value for the consumed key
+      hashmap_set((hashmap_t*) node_top->value, key, new_node);
       continue;
     }
 
     // Consuming array values
-    if (node_current->type == NodeArray) {
-      if (_next_token(&state)->type == TokenUnsquare) {
-        dynarray_remove_top(state.node_stack);
-        _inc_next_token(&state);
+    if (node_top->type == NodeArray) {
+      // Closing the current array
+      if (_token_current(&state)->type == TokenUnsquare) {
+        // DEBUG_dynarray_dump(dynarray_top);
 
-        if (state.node_stack->len > 0 && _next_token(&state)->type == TokenComma) {
-          _inc_next_token(&state);
+        dynarray_remove_top(state.node_stack);
+        _inc_token_current(&state);
+
+        if (state.node_stack->len > 0 && _token_current(&state)->type == TokenComma) {
+          _inc_token_current(&state);
         }
 
         continue;
       }
 
-      _consume_array_values(&state);
+      // And a value
+      node_t* new_node = _consume_value(&state);
+
+      // printf("dynarray append addr = %p\n", node_val);
+      dynarray_append((dynarray_t*) node_top->value, new_node);
+
       continue;
     }
   }
