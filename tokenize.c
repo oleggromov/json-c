@@ -10,7 +10,7 @@
 static token_list_t* allocate_token_list();
 static token_t* reallocate_tokens(token_t* tokens, token_length_t length);
 
-static void append_token(token_list_t* token_list, token_type_t token_type);
+static void append_token(token_list_t* token_list, token_type_t token_type, size_t pos_start);
 
 static void read_string(char** str_ptr, char** read_str_ptr);
 static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* type_ptr);
@@ -19,45 +19,48 @@ static int read_null(char** str_ptr);
 
 // TODO:
 // - testcase: fill memory with garbage and check what tokenize returns
-token_list_t* tokenize(char* str)
+token_list_t* tokenize(const char* str)
 {
   token_list_t* result = allocate_token_list();
   result->tokens = NULL;
   result->length = 0;
 
-  while (*str) {
-    char error_buf[128] = {0};
+  char* cur = (char*) str;
+  size_t tmp_pos;
+
+  while (*cur) {
     int* bool_value_ptr;
     int null_result;
 
-    switch (*str) {
+    switch (*cur) {
       case '{':
-        append_token(result, TokenCurly);
+        append_token(result, TokenCurly, cur - str);
         break;
 
       case '}':
-        append_token(result, TokenUncurly);
+        append_token(result, TokenUncurly, cur - str);
         break;
 
       case '[':
-        append_token(result, TokenSquare);
+        append_token(result, TokenSquare, cur - str);
         break;
 
       case ']':
-        append_token(result, TokenUnsquare);
+        append_token(result, TokenUnsquare, cur - str);
         break;
 
       case ':':
-        append_token(result, TokenColon);
+        append_token(result, TokenColon, cur - str);
         break;
 
       case ',':
-        append_token(result, TokenComma);
+        append_token(result, TokenComma, cur - str);
         break;
 
       case '\"':
-        append_token(result, TokenString);
-        read_string(&str, (char**) &result->tokens[result->length - 1].value_ptr);
+        append_token(result, TokenString, cur - str);
+        read_string(&cur, (char**) &result->tokens[result->length - 1].value_ptr);
+        result->tokens[result->length-1]._pos_end = cur - str;
         break;
 
       case '.':
@@ -72,30 +75,36 @@ token_list_t* tokenize(char* str)
       case '7':
       case '8':
       case '9':
-        append_token(result, TokenLong);
-        read_number(&str, &result->tokens[result->length - 1].value_ptr, &result->tokens[result->length - 1].type);
+        append_token(result, TokenLong, cur - str);
+        read_number(&cur, &result->tokens[result->length - 1].value_ptr, &result->tokens[result->length - 1].type);
+        result->tokens[result->length-1]._pos_end = cur - str;
         break;
 
+      // TODO fix falsenull and other insanities
       case 't':
       case 'f':
-        bool_value_ptr = read_bool(&str);
+        tmp_pos = cur - str;
+
+        bool_value_ptr = read_bool(&cur);
         if (NULL == bool_value_ptr) {
-          sprintf(error_buf, "tokenize: expected true or false literal after \"%c\" in input", *str);
-          die(error_buf);
+          die("tokenize: expected true or false literal after \"%c\" in input", *cur);
         }
 
-        append_token(result, TokenBool);
+        append_token(result, TokenBool, tmp_pos);
         result->tokens[result->length - 1].value_ptr = bool_value_ptr;
+        result->tokens[result->length-1]._pos_end = cur - str;
         break;
 
       case 'n':
-        null_result = read_null(&str);
+        tmp_pos = cur;
+
+        null_result = read_null(&cur);
         if (-1 == null_result) {
-          sprintf(error_buf, "tokenize: expected null literal after \"%c\" in input", *str);
-          die(error_buf);
+          die("tokenize: expected null literal after \"%c\" in input", *cur);
         }
 
-        append_token(result, TokenNull);
+        append_token(result, TokenNull, tmp_pos);
+        result->tokens[result->length-1]._pos_end = cur - str;
         break;
 
       case ' ':
@@ -105,11 +114,10 @@ token_list_t* tokenize(char* str)
         break;
 
       default:
-        sprintf(error_buf, "tokenize: unexpected char \"%c\" in input", *str);
-        die(error_buf);
+        die("tokenize: unexpected char \"%c\" in input", *cur);
     }
 
-    str++;
+    cur++;
   }
 
   return result;
@@ -145,14 +153,17 @@ static token_t* reallocate_tokens(token_t* tokens, token_length_t length)
   return ptr;
 }
 
-static void append_token(token_list_t* token_list, token_type_t token_type)
+// Internal functions
+static void append_token(token_list_t* token_list, token_type_t token_type, size_t pos_start)
 {
   token_list->tokens = reallocate_tokens(token_list->tokens, token_list->length + 1);
   token_list->tokens[token_list->length].type = token_type;
   token_list->tokens[token_list->length].value_ptr = NULL;
+  token_list->tokens[token_list->length]._pos_start = pos_start;
   token_list->length += 1;
 }
 
+// Comes null terminated
 static void read_string(char** str_ptr, char** read_str_ptr)
 {
   // strings start with \"
@@ -166,7 +177,7 @@ static void read_string(char** str_ptr, char** read_str_ptr)
 
     if (**str_ptr == '\"') {
       end = *str_ptr;
-      *read_str_ptr = malloc((end - start) + 1);
+      *read_str_ptr = malloc(((end - start) + 1) * sizeof(char));
       **read_str_ptr = '\0';
       strncat(*read_str_ptr, start, end - start);
       return;
