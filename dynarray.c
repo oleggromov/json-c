@@ -4,6 +4,8 @@
 #include "dynarray.h"
 #include "util.h"
 
+#include <stdio.h>
+
 const size_t SIZE_INC = 64;
 
 dynarray_t* dynarray_create(void)
@@ -102,4 +104,15 @@ void* dynarray_remove_top(dynarray_t* arr)
   arr->_arr[arr->len - 1] = NULL;
   arr->len--;
   return value_ptr;
+}
+
+void DEBUG_dynarray_dump(dynarray_t* arr)
+{
+  printf("\ndynarray stats:\n");
+  printf("address = %p\n", (void*) arr);
+  printf("len = %d, capacity = %d, _arr (addr) = %p\n", (int) arr->len, (int) arr->_capacity, (void*) arr->_arr);
+  for (size_t i = 0; i < arr->len; i++) {
+    printf("arr[%zu] = %p\n", i, dynarray_get(arr, i));
+  }
+  printf("\n");
 }

@@ -20,4 +20,6 @@ void dynarray_append(dynarray_t* arr, void* value);
 void* dynarray_get_top(dynarray_t* arr);
 void* dynarray_remove_top(dynarray_t* arr);
 
-#endif
+void DEBUG_dynarray_dump(dynarray_t* arr);
+
+#endif // DYNARRAY_H
