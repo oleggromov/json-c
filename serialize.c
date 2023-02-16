@@ -40,7 +40,7 @@ static void append_buf_str_indented(serialize_state_t* state, char* str, unsigne
   append_buf_str(state, str, str_len);
 }
 
-static void step(serialize_state_t* state, node_t* node, unsigned int depth)
+static void step(serialize_state_t* state, node_t* node, unsigned int depth, bool indent_values)
 {
   size_t arr_len = -1;
   size_t obj_key_count = -1;
@@ -49,7 +49,11 @@ static void step(serialize_state_t* state, node_t* node, unsigned int depth)
 
   switch (node->type) {
     case NodeObject:
-      append_buf_str(state, "{", 1);
+      if (indent_values) {
+        append_buf_str_indented(state, "{", 1, depth);
+      } else {
+        append_buf_str(state, "{", 1);
+      }
 
       obj_key_count = hashmap_count_keys(node->value);
       obj_keys = hashmap_get_keys(node->value);
@@ -60,7 +64,7 @@ static void step(serialize_state_t* state, node_t* node, unsigned int depth)
         append_buf_str(state, "\"", 1);
         append_buf_str(state, ": ", 2);
 
-        step(state, hashmap_get(node->value, obj_keys[i]), depth + 1);
+        step(state, hashmap_get(node->value, obj_keys[i]), depth + 1, false);
 
         if (i < obj_key_count - 1) {
           append_buf_str(state, ", " , 2);
@@ -78,43 +82,67 @@ static void step(serialize_state_t* state, node_t* node, unsigned int depth)
       for (size_t i = 0; i < arr_len; i++) {
         node_t* child = dynarray_get(node->value, i);
 
-        step(state, child, depth + 1);
+        step(state, child, depth + 1, true);
 
         if (i < arr_len - 1) {
           append_buf_str(state, ", " , 2);
         }
       }
 
-      append_buf_str(state, "]", 1);
+      append_buf_str_indented(state, "]", 1, depth);
       break;
 
     case NodeString:
-      append_buf_str(state, "\"", 1);
+      if (indent_values) {
+        append_buf_str_indented(state, "\"", 1, depth);
+      } else {
+        append_buf_str(state, "\"", 1);
+      }
       append_buf_str(state, node->value, strlen((char*) node->value));
       append_buf_str(state, "\"", 1);
       break;
 
     case NodeLong:
       sprintf(number_buf, "%ld", *(long*) node->value);
-      append_buf_str(state, number_buf, strlen(number_buf));
+      if (indent_values) {
+        append_buf_str_indented(state, number_buf, strlen(number_buf), depth);
+      } else {
+        append_buf_str(state, number_buf, strlen(number_buf));
+      }
       break;
 
     case NodeDouble:
       // TODO preserve original char* for serialisation
       sprintf(number_buf, "%g", *(double*) node->value);
-      append_buf_str(state, number_buf, strlen(number_buf));
+      if (indent_values) {
+        append_buf_str_indented(state, number_buf, strlen(number_buf), depth);
+      } else {
+        append_buf_str(state, number_buf, strlen(number_buf));
+      }
       break;
 
     case NodeBool:
       if (*(int*) node->value == 1) {
-        append_buf_str(state, "true", 4);
+        if (indent_values) {
+          append_buf_str_indented(state, "true", 4, depth);
+        } else {
+          append_buf_str(state, "true", 4);
+        }
       } else {
-        append_buf_str(state, "false", 5);
+        if (indent_values) {
+          append_buf_str_indented(state, "false", 5, depth);
+        } else {
+          append_buf_str(state, "false", 5);
+        }
       }
       break;
 
     case NodeNull:
-      append_buf_str(state, "null", 4);
+      if (indent_values) {
+        append_buf_str_indented(state, "null", 4, depth);
+      } else {
+        append_buf_str(state, "null", 4);
+      }
       break;
   }
 }
@@ -126,7 +154,7 @@ char* serialize(node_t* node) {
     .buf_len = BUF_INCREMENT
   };
 
-  step(&state, node, 0);
+  step(&state, node, 0, false);
 
   append_buf_str(&state, "\0", 1);
   return state.buf;
