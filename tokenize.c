@@ -18,6 +18,8 @@ static int* read_bool(char** str_ptr);
 static int read_null(char** str_ptr);
 
 // TODO:
+// - \C escaped symbols
+// - 1e25 number notation
 // - should the tokenizer know about delimiters (",}]") after values? (falsenull or "string""string" and other things)
 // - testcase: fill memory with garbage and check what tokenize returns
 token_list_t* tokenize(const char* str)
@@ -115,7 +117,7 @@ token_list_t* tokenize(const char* str)
         break;
 
       default:
-        die("tokenize: unexpected char \"%c\" in input", *cur);
+        die("tokenize: unexpected char \"%c\" in input in position %d", *cur, cur - str);
     }
 
     cur++;
@@ -176,7 +178,8 @@ static void read_string(char** str_ptr, char** read_str_ptr)
       die("read_string: found \\n in a string");
     }
 
-    if (**str_ptr == '\"') {
+    // Escaped \" are allowed in strings
+    if (**str_ptr == '\"' && *(*str_ptr - 1) != '\\') {
       end = *str_ptr;
       *read_str_ptr = malloc(((end - start) + 1) * sizeof(char));
       **read_str_ptr = '\0';
