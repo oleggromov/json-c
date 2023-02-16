@@ -9,6 +9,9 @@ json: $(OBJS)
 dynarray_test: dynarray_test.c dynarray.o util.o
 	$(CC) $(CFLAGS) -o $@.out $^
 
+dynarray2_test: dynarray2_test.c dynarray2.o util.o
+	$(CC) $(CFLAGS) -o $@.out $^
+
 hashmap_test: hashmap_test.c hashmap.o murmur3_32.o util.o
 	$(CC) $(CFLAGS) -o $@.out $^
 
