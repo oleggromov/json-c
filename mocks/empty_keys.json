@@ -1,0 +1,8 @@
+{
+  "empty_obj": {},
+  "array": [1, 2, null],
+  "empty_array": [],
+  "obj": {
+    "key": true
+  }
+}
