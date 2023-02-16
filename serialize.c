@@ -71,7 +71,11 @@ static void step(serialize_state_t* state, node_t* node, unsigned int depth, boo
         }
       }
 
-      append_buf_str_indented(state, "}", 1, depth);
+      if (obj_key_count > 0) {
+        append_buf_str_indented(state, "}", 1, depth);
+      } else {
+        append_buf_str(state, "}", 1);
+      }
       break;
 
     case NodeArray:
@@ -89,7 +93,11 @@ static void step(serialize_state_t* state, node_t* node, unsigned int depth, boo
         }
       }
 
-      append_buf_str_indented(state, "]", 1, depth);
+      if (arr_len > 0) {
+        append_buf_str_indented(state, "]", 1, depth);
+      } else {
+        append_buf_str(state, "]", 1);
+      }
       break;
 
     case NodeString:
