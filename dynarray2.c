@@ -25,7 +25,7 @@ static inline void* _mem_offset(dynarray2_t* arr, size_t offset) {
 
 static inline bool _index_within_boundaries(dynarray2_t* arr, ssize_t index)
 {
-  return index >= 0 && index < arr->len;
+  return index >= 0 && (size_t) index < arr->len;
 }
 
 static void _grow_if_needed(dynarray2_t* arr, size_t index)
@@ -64,7 +64,7 @@ void dynarray2_set(dynarray2_t* arr, ssize_t index, void* value)
     // len = 0, index = 0 -> (index == len) + 1
     // len = 3, index = 4 -> index + 1
     // len = 5, index = 3 -> len
-    if (index >= arr->len) {
+    if ((size_t) index >= arr->len) {
       arr->len = index + 1;
     }
   }
