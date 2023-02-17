@@ -11,7 +11,7 @@
 // some bugs with resize may exist!
 //
 
-const size_t SIZE_INC_STEP = 64;
+const size_t DYNARRAY_ALLOC_STEP = 64;
 
 dynarray_t* dynarray_create(void)
 {
@@ -41,13 +41,13 @@ static void _grow_if_needed(dynarray_t* arr)
   if (arr->len + 1 > arr->_capacity) {
     size_t old_size = arr->_capacity;
 
-    arr->_capacity += SIZE_INC_STEP;
+    arr->_capacity += DYNARRAY_ALLOC_STEP;
     arr->_arr = realloc(arr->_arr, sizeof(void*) * arr->_capacity);
     if (arr->_arr == NULL) {
       die("dynarray: couldn't reallocate memory");
     }
 
-    memset(arr->_arr + old_size, 0, sizeof(void*) * SIZE_INC_STEP); // important for sparse arrays
+    memset(arr->_arr + old_size, 0, sizeof(void*) * DYNARRAY_ALLOC_STEP); // important for sparse arrays
   }
 }
 
