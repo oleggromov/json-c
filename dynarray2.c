@@ -1,6 +1,6 @@
 #include "dynarray2.h"
 
-const size_t ALLOC_STEP = 64;
+static const size_t ALLOC_STEP = 64;
 
 dynarray2_t* dynarray2_create(size_t item_size)
 {
