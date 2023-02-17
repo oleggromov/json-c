@@ -1,7 +1,7 @@
 CC=clang
 CFLAGS=-pedantic -Wall -Wextra -std=c99 -g
 # Why murmur3_32.o is not in OBJS?
-OBJS=args.o json.o hashmap.o dynarray.o tokenize.o parse.o serialize.o util.o murmur3_32.o read_file.o
+OBJS=args.o json.o hashmap.o dynarray.o dynarray2.o tokenize.o parse.o serialize.o util.o murmur3_32.o read_file.o
 
 json: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o json.out
