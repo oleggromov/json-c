@@ -1,6 +1,6 @@
 #include "dynarray2.h"
 
-const size_t SIZE_INC_STEP = 64;
+const size_t ALLOC_STEP = 64;
 
 dynarray2_t* dynarray2_create(size_t item_size)
 {
@@ -18,34 +18,21 @@ void dynarray2_free(dynarray2_t* arr)
   free(arr);
 }
 
-static void* _get_item_copy(dynarray2_t* arr, size_t index)
-{
-  void* value_ptr = dynarray2_get(arr, index);
-
-  if (value_ptr != NULL) {
-    void* value = malloc(arr->_item_size);
-    memcpy(value, value_ptr, arr->_item_size);
-    return value;
-  }
-
-  return NULL;
-}
-
 // TODO same as _get but without index checks
-static inline void* _get_item_ptr(dynarray2_t* arr, size_t offset) {
+static inline void* _mem_offset(dynarray2_t* arr, size_t offset) {
   return (uint8_t*) arr->_mem + offset * arr->_item_size;
 }
 
-static bool _assert_index(dynarray2_t* arr, size_t index)
+static inline bool _index_within_boundaries(dynarray2_t* arr, ssize_t index)
 {
-  return !(index > arr->_capacity - 1 || index < 0);
+  return index >= 0 && index < arr->len;
 }
 
 static void _grow_if_needed(dynarray2_t* arr, size_t index)
 {
   if (index > arr->_capacity - 1 || arr->_capacity == 0) {
     size_t old_capacity = arr->_capacity;
-    size_t size_inc = (index / SIZE_INC_STEP + 1) * SIZE_INC_STEP - arr->_capacity;
+    size_t size_inc = (index / ALLOC_STEP + 1) * ALLOC_STEP - arr->_capacity;
 
     arr->_capacity += size_inc;
     arr->_mem = realloc(arr->_mem, arr->_item_size * arr->_capacity);
@@ -53,57 +40,52 @@ static void _grow_if_needed(dynarray2_t* arr, size_t index)
       die("dynarray2: couldn't reallocate memory");
     }
 
-    memset(_get_item_ptr(arr, old_capacity), 0, arr->_item_size * size_inc);
+    memset(_mem_offset(arr, old_capacity), 0, arr->_item_size * size_inc);
   }
 }
 
-void* dynarray2_get(dynarray2_t* arr, size_t index)
+// Returns
+// - item pointer if index is within [0, len] (may be NULL for sparse arrays)
+// - NULL if index is out of bounds
+void* dynarray2_get(dynarray2_t* arr, ssize_t index)
 {
-  if (_assert_index(arr, index)) {
-    return _get_item_ptr(arr, index);
+  if (_index_within_boundaries(arr, index)) {
+    return _mem_offset(arr, index);
   }
   return NULL;
 }
 
-void* dynarray2_set(dynarray2_t* arr, size_t index, void* value)
+void dynarray2_set(dynarray2_t* arr, ssize_t index, void* value)
 {
-  _grow_if_needed(arr, index);
+  if (index >= 0) {
+    _grow_if_needed(arr, index);
+    memcpy(_mem_offset(arr, index), value, arr->_item_size);
 
-  void* old_value = _get_item_copy(arr, index);
-
-  memcpy(_get_item_ptr(arr, index), value, arr->_item_size);
-
-  // len = 0, index = 0 -> (index == len) + 1
-  // len = 3, index = 4 -> index + 1
-  // len = 5, index = 3 -> len
-  if (index >= arr->len) {
-    arr->len = index + 1;
+    // len = 0, index = 0 -> (index == len) + 1
+    // len = 3, index = 4 -> index + 1
+    // len = 5, index = 3 -> len
+    if (index >= arr->len) {
+      arr->len = index + 1;
+    }
   }
-
-  return old_value;
 }
 
-// Has to be freed!
-void* dynarray2_cut(dynarray2_t* arr, size_t index)
+void dynarray2_delete(dynarray2_t* arr, ssize_t index)
 {
-  void* old_value = _get_item_copy(arr, index);
-
-  if (old_value != NULL) {
+  if (_index_within_boundaries(arr, index)) {
     size_t move_items = arr->len - index;
     memmove(
-      _get_item_ptr(arr, index),
-      _get_item_ptr(arr, index + 1),
+      _mem_offset(arr, index),
+      _mem_offset(arr, index + 1),
       move_items * arr->_item_size
     );
     arr->len -= 1;
   }
-
-  return old_value;
 }
 
-void* dynarray2_append(dynarray2_t* arr, void* value)
+void dynarray2_append(dynarray2_t* arr, void* value)
 {
-  return dynarray2_set(arr, arr->len, value);
+  dynarray2_set(arr, arr->len, value);
 }
 
 void* dynarray2_get_top(dynarray2_t* arr)
@@ -111,9 +93,9 @@ void* dynarray2_get_top(dynarray2_t* arr)
   return dynarray2_get(arr, arr->len - 1);
 }
 
-void* dynarray2_remove_top(dynarray2_t* arr)
+void dynarray2_remove_top(dynarray2_t* arr)
 {
-  return dynarray2_cut(arr, arr->len - 1);
+  dynarray2_delete(arr, arr->len - 1);
 }
 
 void DEBUG_dynarray2_dump(dynarray2_t* arr)

@@ -90,6 +90,16 @@ int main() {
 
   dynarray2_t* array_longs = dynarray2_create(sizeof(long));
 
+  printf("Removing top item from an EMPTY array...\n");
+  dynarray2_remove_top(array_longs);
+  // printf("Setting item i=-255...\n");
+  // dynarray2_set(array_longs, -255, &num1);
+  printf("Getting an i=-1...\n");
+  dynarray2_get(array_longs, -1);
+  printf("Setting an i=-1024...\n");
+  dynarray2_set(array_longs, -1024, &num1);
+
+  printf("Setting 0, 1...\n");
   dynarray2_set(array_longs, 0, &num1);
   dynarray2_set(array_longs, 1, &num2);
   print_long_array(array_longs);
@@ -98,8 +108,8 @@ int main() {
   dynarray2_set(array_longs, 10, &num2);
 
   num1 = 665;
-  long* existing_num = dynarray2_set(array_longs, 1, &num1);
-  printf("removed item [1] = %ld, new item [1] = %ld\n", *existing_num, *(long*) dynarray2_get(array_longs, 1));
+  dynarray2_set(array_longs, 1, &num1);
+  printf("replaced item i=1, new item = %ld\n", *(long*) dynarray2_get(array_longs, 1));
 
   printf("array[top] = %ld\n", *(long*) dynarray2_get_top(array_longs));
 
@@ -119,13 +129,13 @@ int main() {
 
   printf("\nRemoving two items from the top and popping one...\n");
 
-  printf("%ld\n", *(long*) dynarray2_remove_top(array_longs));
-  printf("%ld\n", *(long*) dynarray2_remove_top(array_longs));
+  dynarray2_remove_top(array_longs);
+  dynarray2_remove_top(array_longs);
   print_long_array(array_longs);
 
   printf("Removing 5 items from the end...\n");
   for (size_t i = 0; i < 5; i++) {
-    printf("i = %ld: %ld\n", i, *(long*) dynarray2_remove_top(array_longs));
+    dynarray2_remove_top(array_longs);
   }
 
   print_long_array(array_longs);
