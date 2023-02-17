@@ -1,17 +1,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "tokenize.h"
 #include "util.h"
 
-
 // Internal functions
-static token_list_t* allocate_token_list();
-static token_t* reallocate_tokens(token_t* tokens, token_length_t length);
+static void append_token(dynarray2_t* token_list, token_type_t token_type, size_t pos_start);
 
-static void append_token(token_list_t* token_list, token_type_t token_type, size_t pos_start);
-
+static bool has_escape_seq(char* str, size_t offset);
 static void read_string(char** str_ptr, char** read_str_ptr);
 static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* type_ptr);
 static int* read_bool(char** str_ptr);
@@ -22,14 +20,15 @@ static int read_null(char** str_ptr);
 // - 1e25 number notation
 // - should the tokenizer know about delimiters (",}]") after values? (falsenull or "string""string" and other things)
 // - testcase: fill memory with garbage and check what tokenize returns
-token_list_t* tokenize(const char* str)
+dynarray2_t* tokenize(const char* str)
 {
-  token_list_t* result = allocate_token_list();
-  result->tokens = NULL;
-  result->length = 0;
+  dynarray2_t* token_list = dynarray2_create(sizeof(token_t));
+  token_t* current_token = NULL;
 
   char* cur = (char*) str;
   size_t tmp_pos;
+
+  char err_buf[1024] = {0};
 
   while (*cur) {
     int* bool_value_ptr;
@@ -37,33 +36,35 @@ token_list_t* tokenize(const char* str)
 
     switch (*cur) {
       case '{':
-        append_token(result, TokenCurly, cur - str);
+        append_token(token_list, TokenCurly, cur - str);
         break;
 
       case '}':
-        append_token(result, TokenUncurly, cur - str);
+        append_token(token_list, TokenUncurly, cur - str);
         break;
 
       case '[':
-        append_token(result, TokenSquare, cur - str);
+        append_token(token_list, TokenSquare, cur - str);
         break;
 
       case ']':
-        append_token(result, TokenUnsquare, cur - str);
+        append_token(token_list, TokenUnsquare, cur - str);
         break;
 
       case ':':
-        append_token(result, TokenColon, cur - str);
+        append_token(token_list, TokenColon, cur - str);
         break;
 
       case ',':
-        append_token(result, TokenComma, cur - str);
+        append_token(token_list, TokenComma, cur - str);
         break;
 
       case '\"':
-        append_token(result, TokenString, cur - str);
-        read_string(&cur, (char**) &result->tokens[result->length - 1].value_ptr);
-        result->tokens[result->length-1]._pos_end = cur - str;
+        append_token(token_list, TokenString, cur - str);
+        current_token = dynarray2_get_top(token_list);
+        read_string(&cur, (char**) &current_token->value_ptr);
+        current_token->_pos_end = cur - str;
+        current_token = NULL;
         break;
 
       case '.':
@@ -78,9 +79,11 @@ token_list_t* tokenize(const char* str)
       case '7':
       case '8':
       case '9':
-        append_token(result, TokenLong, cur - str);
-        read_number(&cur, &result->tokens[result->length - 1].value_ptr, &result->tokens[result->length - 1].type);
-        result->tokens[result->length-1]._pos_end = cur - str;
+        append_token(token_list, TokenLong, cur - str);
+        current_token = dynarray2_get_top(token_list);
+        read_number(&cur, &current_token->value_ptr, &current_token->type);
+        current_token->_pos_end = cur - str;
+        current_token = NULL;
         break;
 
       // TODO fix falsenull and other insanities
@@ -93,9 +96,11 @@ token_list_t* tokenize(const char* str)
           die("tokenize: expected true or false literal after \"%c\" in input", *cur);
         }
 
-        append_token(result, TokenBool, tmp_pos);
-        result->tokens[result->length - 1].value_ptr = bool_value_ptr;
-        result->tokens[result->length-1]._pos_end = cur - str;
+        append_token(token_list, TokenBool, tmp_pos);
+        current_token = dynarray2_get_top(token_list);
+        current_token->value_ptr = bool_value_ptr;
+        current_token->_pos_end = cur - str;
+        current_token = NULL;
         break;
 
       case 'n':
@@ -103,11 +108,12 @@ token_list_t* tokenize(const char* str)
 
         null_result = read_null(&cur);
         if (-1 == null_result) {
-          die("tokenize: expected null literal after \"%c\" in input", *cur);
+          die("tokenize: expected null literal after \"%c\" in input in position %d", *cur, cur - str);
         }
 
-        append_token(result, TokenNull, tmp_pos);
-        result->tokens[result->length-1]._pos_end = cur - str;
+        append_token(token_list, TokenNull, tmp_pos);
+        current_token = dynarray2_get_top(token_list);
+        current_token->_pos_end = cur - str;
         break;
 
       case ' ':
@@ -117,53 +123,43 @@ token_list_t* tokenize(const char* str)
         break;
 
       default:
-        die("tokenize: unexpected char \"%c\" in input in position %d", *cur, cur - str);
+        strncpy(err_buf, (str + (cur - str - 20)), 41);
+        die("tokenize: unexpected char \"%c\" in input in position %d\n%s", *cur, cur - str, err_buf);
     }
 
     cur++;
   }
 
-  return result;
-}
-
-static token_list_t* allocate_token_list()
-{
-  void *ptr = malloc(sizeof(token_list_t));
-  if (ptr == NULL) {
-    die("allocate_token_list: failed to allocated memory");
-  }
-
-  return ptr;
-}
-
-void free_token_list(token_list_t* token_list)
-{
-  for (token_length_t i = 0; i < token_list->length; i++) {
-    free(token_list->tokens[i].value_ptr);
-  }
-  free(token_list->tokens);
-}
-
-// TODO allocate more in advance (estimate from the input length)
-static token_t* reallocate_tokens(token_t* tokens, token_length_t length)
-{
-  void* ptr = realloc(tokens, length * sizeof(token_t));
-
-  if (ptr == NULL) {
-    die("reallocate_token: failed to allocate memory");
-  }
-
-  return ptr;
+  return token_list;
 }
 
 // Internal functions
-static void append_token(token_list_t* token_list, token_type_t token_type, size_t pos_start)
+static void append_token(dynarray2_t* token_list, token_type_t token_type, size_t pos_start)
 {
-  token_list->tokens = reallocate_tokens(token_list->tokens, token_list->length + 1);
-  token_list->tokens[token_list->length].type = token_type;
-  token_list->tokens[token_list->length].value_ptr = NULL;
-  token_list->tokens[token_list->length]._pos_start = pos_start;
-  token_list->length += 1;
+  token_t value = {
+    .type = token_type,
+    .value_ptr = NULL,
+    ._pos_start = pos_start
+  };
+  dynarray2_append(token_list, &value);
+}
+
+// TODO this must be mindful of the string boundaries!
+static bool has_escape_seq(char* str, size_t offset)
+{
+  char* start = str + offset;
+
+  return (
+    strncmp(start, "\\\\", 2) == 0 ||
+    // strncmp(start, "\\\"", 2) == 0 ||
+    strncmp(start, "\\/", 2) == 0 ||
+    strncmp(start, "\\b", 2) == 0 ||
+    strncmp(start, "\\f", 2) == 0 ||
+    strncmp(start, "\\n", 2) == 0 ||
+    strncmp(start, "\\r", 2) == 0 ||
+    strncmp(start, "\\t", 2) == 0
+    // TODO add \uXXXX
+  );
 }
 
 // Comes null terminated
@@ -179,7 +175,7 @@ static void read_string(char** str_ptr, char** read_str_ptr)
     }
 
     // Escaped \" are allowed in strings
-    if (**str_ptr == '\"' && *(*str_ptr - 1) != '\\') {
+    if (**str_ptr == '\"' && *(*str_ptr - 1) != '\\' && !has_escape_seq(*str_ptr, -2)) {
       end = *str_ptr;
       *read_str_ptr = malloc(((end - start) + 1) * sizeof(char));
       **read_str_ptr = '\0';

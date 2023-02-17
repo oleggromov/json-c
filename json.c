@@ -6,7 +6,7 @@
 #include "tokenize.h"
 #include "parse.h"
 #include "serialize.h"
-#include "dynarray.h"
+#include "dynarray2.h"
 #include "read_file.h"
 
 int main(int argc, char** argv)
@@ -26,13 +26,13 @@ int main(int argc, char** argv)
 
   // printf("Input file length = %zu\n", input->buffer_len);
 
-  token_list_t* tokens = tokenize(input->buffer);
+  dynarray2_t* tokens = tokenize(input->buffer);
 
-  printf("\n\ntoken list length = %llu\n", tokens->length);
-  if (tokens->length > 0) {
+  printf("\n\ntoken list length = %zu\n", tokens->len);
+  if (tokens->len > 0) {
     printf("TOKENS:\n\n");
-    for (token_length_t i = 0; i < tokens->length; i++) {
-      DEBUG_print_token(&tokens->tokens[i]);
+    for (size_t i = 0; i < tokens->len; i++) {
+      DEBUG_print_token(dynarray2_get(tokens, i));
     }
     printf("\n");
   }

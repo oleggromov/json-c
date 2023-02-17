@@ -11,7 +11,7 @@
 typedef struct {
   node_t* root;
   dynarray_t* node_stack;
-  token_list_t* token_list;
+  dynarray2_t* token_list;
   token_length_t token_current;
 } parse_state_t;
 
@@ -49,7 +49,7 @@ static node_t* _allocate_node(node_type_t type, void* value)
 
 static inline token_t* _token_current(parse_state_t* state)
 {
-  return &state->token_list->tokens[state->token_current];
+  return dynarray2_get(state->token_list, state->token_current);
 }
 
 static inline void _inc_token_current(parse_state_t* state)
@@ -122,7 +122,7 @@ static node_t* _consume_value(parse_state_t* state)
   return node;
 }
 
-node_t* parse(token_list_t* token_list, const char* input_str)
+node_t* parse(dynarray2_t* token_list, const char* input_str)
 {
   parse_state_t state = {
     .root = NULL,
@@ -131,7 +131,7 @@ node_t* parse(token_list_t* token_list, const char* input_str)
     .token_list = token_list
   };
 
-  while (state.token_current < state.token_list->length) {
+  while (state.token_current < state.token_list->len) {
 
     node_t* node_top = NULL;
 
