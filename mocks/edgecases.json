@@ -1,0 +1,22 @@
+{
+  "strings": {
+    "regular string": "just a string",
+    "with quotes in the middle": "a string \"with quotes\" and something else",
+    "with quotes in the end": "a string \"with quotes\"",
+    "with a slash in the middle": "slash in the \/ middle",
+    "slash in the end": "slash in the \/",
+    "reverse slash middle": "string with \\ reverse slash",
+    "reverse slash / end": "c:\\windows\\folder\\",
+    "special characters in the string": "\tBack\bspace (what is even \f formfeed) and \r\n and in the end too.\r\n",
+    "unicode stuff": "\uAB0F and something else \uBEEF"
+  },
+  "numbers": {
+    "normal": 20,
+    "float": 20930.4443,
+    "negative": -3120,
+    "negative float": -3.14159,
+    "scientific": 1.55e24,
+    "negative scientific": -1e12,
+    "negative scientific with negative power": -1e-3
+  }
+}
