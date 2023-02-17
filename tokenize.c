@@ -9,7 +9,6 @@
 // Internal functions
 static void append_token(dynarray2_t* token_list, token_type_t token_type, size_t pos_start);
 
-static bool has_escape_seq(char* str, size_t offset);
 static void read_string(char** str_ptr, char** read_str_ptr);
 static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* type_ptr);
 static int* read_bool(char** str_ptr);
@@ -144,22 +143,17 @@ static void append_token(dynarray2_t* token_list, token_type_t token_type, size_
   dynarray2_append(token_list, &value);
 }
 
-// TODO this must be mindful of the string boundaries!
-static bool has_escape_seq(char* str, size_t offset)
-{
-  char* start = str + offset;
+static const char ESCAPE_SYMBOLS[] = {'"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u'};
 
-  return (
-    strncmp(start, "\\\\", 2) == 0 ||
-    // strncmp(start, "\\\"", 2) == 0 ||
-    strncmp(start, "\\/", 2) == 0 ||
-    strncmp(start, "\\b", 2) == 0 ||
-    strncmp(start, "\\f", 2) == 0 ||
-    strncmp(start, "\\n", 2) == 0 ||
-    strncmp(start, "\\r", 2) == 0 ||
-    strncmp(start, "\\t", 2) == 0
-    // TODO add \uXXXX
-  );
+// TODO add \uXXXX hex validation
+static inline bool _is_valid_escape_char(char c)
+{
+  for (size_t i = 0; i < sizeof(ESCAPE_SYMBOLS); i++) {
+    if (c == ESCAPE_SYMBOLS[i]) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // Comes null terminated
@@ -168,14 +162,24 @@ static void read_string(char** str_ptr, char** read_str_ptr)
   // strings start with \"
   char* start = *str_ptr + 1;
   char* end = NULL;
+  bool is_escape = false;
 
   while (*(*str_ptr)++) {
-    if (**str_ptr == '\n') {
-      die("read_string: found \\n in a string");
+    if (is_escape) {
+      if (_is_valid_escape_char(**str_ptr)) {
+        is_escape = false;
+        continue;
+      }
+
+      die("tokenize/read_string: unexpected escape sequence \\%c", **str_ptr);
     }
 
-    // Escaped \" are allowed in strings
-    if (**str_ptr == '\"' && *(*str_ptr - 1) != '\\' && !has_escape_seq(*str_ptr, -2)) {
+    if (**str_ptr == '\\') {
+      is_escape = true;
+      continue;
+    }
+
+    if (**str_ptr == '\"') {
       end = *str_ptr;
       *read_str_ptr = malloc(((end - start) + 1) * sizeof(char));
       **read_str_ptr = '\0';
@@ -184,7 +188,7 @@ static void read_string(char** str_ptr, char** read_str_ptr)
     }
   }
 
-  die("read_string: found an unterminated string");
+  die("tokenize/read_string: found an unterminated string");
 }
 
 static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* type_ptr)
