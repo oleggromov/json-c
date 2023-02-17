@@ -28,12 +28,10 @@ text_file_t* read_text_file(char* filename)
 
   if ((result->error = ferror(fp)) != 0) {
     free(result->buffer);
-    fclose(fp);
-    return result;
+    result->buffer = NULL;
   }
 
   fclose(fp);
-
   return result;
 }
 
