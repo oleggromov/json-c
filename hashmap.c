@@ -7,8 +7,13 @@ hashmap_t* hashmap_create(void)
   const hashmap_size_t BUCKETS = 1024;
   hashmap_t* obj = malloc(sizeof(hashmap_t));
 
-  obj->values = malloc(BUCKETS * sizeof(hashmap_value_t*));
+  obj->values = calloc(BUCKETS, sizeof(hashmap_value_t*)); // 0-ing pointers
   obj->sizes = calloc(BUCKETS, sizeof(long)); // 0-ing sizes
+
+  if (obj->values == NULL || obj->sizes == NULL) {
+    die("hashmap_create: allocation failed");
+  }
+
   obj->size = BUCKETS;
 
   return obj;

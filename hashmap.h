@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "murmur3_32.h"
+#include "util.h"
 
 typedef unsigned long hashmap_size_t;
 
