@@ -1,12 +1,7 @@
+#include <sys/types.h>
+
 #ifndef DYNARRAY2_H
 #define DYNARRAY2_H
-
-#include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
-#include <stdbool.h>
-
-#include "util.h"
 
 typedef struct {
   size_t len;

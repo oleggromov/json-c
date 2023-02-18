@@ -1,3 +1,8 @@
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#include "util.h"
 #include "dynarray2.h"
 
 static const size_t ALLOC_STEP = 64;
