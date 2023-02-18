@@ -18,7 +18,7 @@ void print_long_array(dynarray2_t* arr)
   printf(")\n");
 }
 
-int main() {
+int main(void) {
   // int a = 1;
   // int b = 2;
   // int c = 3;
@@ -109,7 +109,7 @@ int main() {
 
   num1 = 665;
   dynarray2_set(array_longs, 1, &num1);
-  printf("replaced item i=1, new item = %ld\n", *(long*) dynarray2_get(array_longs, 1));
+  printf("replaced item i=1, new item = %ld\n", *dynarray2_get_val(array_longs, 1).lp);
 
   printf("array[top] = %ld\n", *(long*) dynarray2_get_top(array_longs));
 
@@ -123,7 +123,7 @@ int main() {
 
   print_long_array(array_longs);
 
-  printf("array top = %ld, ptr = %p\n", *(long*) dynarray2_get_top(array_longs), dynarray2_get_top(array_longs));
+  printf("array top = %ld, ptr = %p\n", *dynarray2_get_top_val(array_longs).lp, dynarray2_get_top(array_longs));
 
   print_long_array(array_longs);
 

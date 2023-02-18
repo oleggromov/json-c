@@ -55,6 +55,11 @@ void* dynarray2_get(dynarray2_t* arr, ssize_t index)
   return NULL;
 }
 
+dynarray2_ptr_t dynarray2_get_val(dynarray2_t* arr, ssize_t index)
+{
+  return (dynarray2_ptr_t){.p = dynarray2_get(arr, index)};
+}
+
 void dynarray2_set(dynarray2_t* arr, ssize_t index, void* value)
 {
   if (index >= 0) {
@@ -91,6 +96,11 @@ void dynarray2_append(dynarray2_t* arr, void* value)
 void* dynarray2_get_top(dynarray2_t* arr)
 {
   return dynarray2_get(arr, arr->len - 1);
+}
+
+dynarray2_ptr_t dynarray2_get_top_val(dynarray2_t* arr)
+{
+  return (dynarray2_ptr_t){.p = dynarray2_get_top(arr)};
 }
 
 void dynarray2_remove_top(dynarray2_t* arr)
