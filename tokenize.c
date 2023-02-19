@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <stdbool.h>
+#include <float.h>
 
 #include "tokenize.h"
 #include "util.h"
@@ -25,7 +27,7 @@ dynarray2_t* tokenize(const char* str)
   token_t* current_token = NULL;
 
   char* cur = (char*) str;
-  size_t tmp_pos;
+  ptrdiff_t tmp_pos;
 
   char err_buf[1024] = {0};
 
@@ -103,7 +105,7 @@ dynarray2_t* tokenize(const char* str)
         break;
 
       case 'n':
-        tmp_pos = cur;
+        tmp_pos = (ptrdiff_t) cur;
 
         null_result = read_null(&cur);
         if (-1 == null_result) {
@@ -143,7 +145,12 @@ static void append_token(dynarray2_t* token_list, token_type_t token_type, size_
   dynarray2_append(token_list, &value);
 }
 
+
 static const char ESCAPE_SYMBOLS[] = {'"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u'};
+
+
+// TODO use isxdigit
+// static const char HEX_DIGITS[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 // TODO add \uXXXX hex validation
 static inline bool _is_valid_escape_char(char c)
@@ -156,7 +163,7 @@ static inline bool _is_valid_escape_char(char c)
   return false;
 }
 
-// Comes null terminated
+// Returned null terminated
 static void read_string(char** str_ptr, char** read_str_ptr)
 {
   // strings start with \"
@@ -196,33 +203,33 @@ static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* ty
   char* start = *str_ptr;
   char* end = NULL;
 
-  int seen_minus = 0;
-  int lead_digit = 0;
-  int seen_period = 0;
+  bool seen_minus = 0;
+  bool lead_digit = 0;
+  bool seen_period = 0;
 
   do {
     switch (**str_ptr) {
       // TODO:
-      // exponent support
-      // non 10- base support
+      // - scientific notation
+      // - big ints
       case '-':
         if (*str_ptr != start) {
           die("read_number: found extra \"-\" in a number literal");
         }
 
-        seen_minus = 1;
+        seen_minus = true;
         break;
 
       case '.':
-        if (lead_digit == 0) {
+        if (lead_digit == false) {
           die("read_number: expected a digit in front of a \".\"");
         }
 
-        if (seen_period == 1) {
+        if (seen_period == true) {
           die("read_number: found extra \".\" in a number literal");
         }
 
-        seen_period = 1;
+        seen_period = true;
         break;
 
       case '0':
@@ -236,7 +243,7 @@ static void read_number(char** str_ptr, void** read_number_ptr, token_type_t* ty
       case '8':
       case '9':
         if (start == *str_ptr || (seen_minus == 1 && start + 1 == *str_ptr)) {
-          lead_digit = 1;
+          lead_digit = true;
         }
         break;
 

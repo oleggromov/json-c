@@ -18,7 +18,7 @@ unsigned int get_args(json_args_t* json_args, int argc, char** argv)
   return 0;
 }
 
-void print_help()
+void print_help(void)
 {
   printf("Usage:\n");
   printf("json -i <input_file>\n");

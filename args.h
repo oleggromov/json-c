@@ -9,6 +9,6 @@ typedef struct {
 } json_args_t;
 
 unsigned int get_args(json_args_t* json_args, int argc, char** argv);
-void print_help();
+void print_help(void);
 
 #endif
