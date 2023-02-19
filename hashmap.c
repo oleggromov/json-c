@@ -149,20 +149,26 @@ size_t hashmap_count_keys(hashmap_t* obj)
 
 char** hashmap_get_keys(hashmap_t* obj)
 {
-  char** ptr_list = malloc(hashmap_count_keys(obj) * sizeof(char*));
+  size_t key_count = hashmap_count_keys(obj);
 
-  int key_i = 0;
-  for (size_t bucket_no = 0; bucket_no < obj->_size; bucket_no++) {
-    for (size_t i = 0; i < obj->_sizes[bucket_no]; i++) {
-      unsigned int key_len = strlen(obj->_values[bucket_no][i].key);
-      ptr_list[key_i] = malloc(key_len + 1);
-      *ptr_list[key_i] = '\0';
-      strncat(ptr_list[key_i], obj->_values[bucket_no][i].key, key_len);
-      key_i++;
+  if (key_count > 0) {
+    char** ptr_list = malloc(key_count * sizeof(char*));
+
+    int key_i = 0;
+    for (size_t bucket_no = 0; bucket_no < obj->_size; bucket_no++) {
+      for (size_t i = 0; i < obj->_sizes[bucket_no]; i++) {
+        unsigned int key_len = strlen(obj->_values[bucket_no][i].key);
+        ptr_list[key_i] = malloc(key_len + 1);
+        *ptr_list[key_i] = '\0';
+        strncat(ptr_list[key_i], obj->_values[bucket_no][i].key, key_len);
+        key_i++;
+      }
     }
+
+    return ptr_list;
   }
 
-  return ptr_list;
+  return NULL;
 }
 
 double hashmap_get_load_factor(hashmap_t* obj)

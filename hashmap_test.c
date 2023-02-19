@@ -1,100 +1,136 @@
+#include <alloca.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "hashmap.h"
 
+static int test_no = 0;
 
-static void print_hash(char* str)
-{
-  unsigned int len = strlen(str);
-  unsigned int hash = murmur3_32((uint8_t*) str, len, 0xDEADBEEF);
-  printf("0x%08X\t\"%s\"\n", hash, str);
-}
-
-
-int main()
+static inline void test(char* name, void (*fn)(hashmap_t*))
 {
   hashmap_t* hashmap = hashmap_create();
-  int value1 = 1024;
 
-  char* str = alloca((strlen("hello world") + 1) * sizeof(char));
-  *str = '\0';
-  strcat(str, "hello world");
-
-  printf("[stack] value1=%p\n", &value1);
-  printf("[heap] str=%p\n", str);
-
-  hashmap_set(hashmap, "test key", &value1);
-  printf("test key: pointer = %p, value = %d\n", hashmap_get(hashmap, "test key"), *(int*) hashmap_get(hashmap, "test key"));
-
-  hashmap_set(hashmap, "another key", str);
-  printf("another key: pointer = %p, value = %s\n", hashmap_get(hashmap, "another key"), hashmap_get(hashmap, "another key"));
-
-  *str = '\0';
-  strcat(str, "no");
-
-  printf("another key (after messing with pointer): pointer = %p, value = %s\n", hashmap_get(hashmap, "another key"), hashmap_get(hashmap, "another key"));
-
-  // void *replaced = hashmap_set(hashmap, "another key", &value1);
-  // printf("another key (old value): pointer = %p, value = %s\n", replaced, replaced);
-  // printf("another key (replaced): pointer = %p, value = %d\n", hashmap_get(hashmap, "another key"), *(int*) hashmap_get(hashmap, "another key"));
-
-  printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
-
-  srand(time(NULL));
-  for (size_t i = 0; i < 10000; i++) {
-    char* key = alloca(20 * sizeof(char));
-    sprintf(key, "key-%d", i);
-    int* value = alloca(sizeof(int));
-    *value = rand();
-
-    if (i % 1000 == 0) {
-      printf("key count = %d, load factor = %f\n", hashmap_count_keys(hashmap), hashmap_get_load_factor(hashmap));    }
-
-    hashmap_set(hashmap, key, value);
-  }
-
-  size_t key_count = hashmap_count_keys(hashmap);
-
-  printf("key count = %d\n", key_count);
-  printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
-
-  printf("\nNow removing test keys...\n");
-  char** keys = hashmap_get_keys(hashmap);
-  for (size_t i = 0; i < key_count - 50; i++) {
-    if (strcmp("another key", keys[i]) != 0 && strcmp("test key", keys[i]) != 0) {
-      hashmap_del(hashmap, keys[i]);
-    }
-  }
-
-  printf("test key: pointer = %p, value = %d\n", hashmap_get(hashmap, "test key"), *(int*) hashmap_get(hashmap, "test key"));
-  printf("another key: pointer = %p, value = %s\n", hashmap_get(hashmap, "another key"), hashmap_get(hashmap, "another key"));
-  printf("key count = %d\n", hashmap_count_keys(hashmap));
-  printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
-
-  printf("Remaining keys:\n");
-  key_count = hashmap_count_keys(hashmap);
-  keys = hashmap_get_keys(hashmap);
-  for (size_t i = 0; i < key_count; i++) {
-    if (strcmp("another key", keys[i]) == 0) {
-      printf("%s=%s\t", keys[i], hashmap_get(hashmap, keys[i]));
-    } else {
-      printf("%s=%d\t", keys[i], *(int*) hashmap_get(hashmap, keys[i]));
-    }
-  }
-  printf("\n");
-
+  printf("%d: %s... ", ++test_no, name);
+  fn(hashmap);
+  printf("pass\n");
 
   hashmap_free(&hashmap);
+}
 
-  printf("\n\nMurmur3 sample hashes:\n");
-  print_hash("");
-  print_hash("hello, world");
-  print_hash("hello, world!");
-  print_hash("good bye, world!");
-  print_hash("1");
-  print_hash("2");
-  print_hash("12");
-  print_hash("true");
+void set_get_del(hashmap_t* obj)
+{
+  char* str = alloca(sizeof("hello world") + 1);
+  *str = '\0';
+  strcat(str, "hello world");
+  long* number = alloca(sizeof(long));
+  *number = 218448782393093;
+  double* pi = alloca(sizeof(double));
+  *pi = 3.14159;
 
-  return 0;
+  hashmap_set(obj, "a string", str);
+  hashmap_set(obj, "long number", number);
+  hashmap_set(obj, "pi", pi);
+
+  assert(hashmap_get(obj, "pi") == pi);
+  assert(*(double*) hashmap_get(obj, "pi") == 3.14159);
+  assert(hashmap_get(obj, "a string") == str);
+  assert(strcmp((char*) hashmap_get(obj, "a string"), "hello world") == 0);
+  assert(hashmap_get(obj, "long number") == number);
+  assert(*(long*) hashmap_get(obj, "long number") == 218448782393093);
+
+  assert(hashmap_get(obj, "non-key") == NULL);
+
+  hashmap_del(obj, "a string");
+  assert(hashmap_get(obj, "a string") == NULL);
+
+  hashmap_del(obj, "pi");
+  assert(hashmap_get(obj, "pi") == NULL);
+  assert(hashmap_get(obj, "long number") == number);
+  hashmap_del(obj, "long number");
+  assert(hashmap_get(obj, "long number") == NULL);
+}
+
+void keys_over_buckets(hashmap_t* obj)
+{
+  const int size = HASHMAP_SIZE_BUCKETS * 10;
+  long *values = alloca(sizeof(long) * size);
+  char *keys = alloca(sizeof(char) * 30 * size);
+
+  for (int i = 0; i < size; i++) {
+    values[i] = (long) i * 1024;
+    sprintf(keys + i * 30, "key-%d", i);
+    hashmap_set(obj, keys + i * 30, &values[i]);
+  }
+
+  char cur_key[30];
+  for (int i = 0; i < size; i++) {
+    sprintf(cur_key, "key-%d", i);
+    assert(hashmap_get(obj, cur_key) == &values[i]);
+    assert(*(long*) hashmap_get(obj, cur_key) == values[i]);
+  }
+}
+
+static inline int str_comp(const void* s1, const void* s2)
+{
+  return strcmp(*(char**) s1, *(char**) s2);
+}
+
+void key_methods(hashmap_t* obj)
+{
+  char* str = alloca(sizeof("hello world") + 1);
+  *str = '\0';
+  strcat(str, "hello world");
+  long* number = alloca(sizeof(long));
+  *number = 218448782393093;
+  double* pi = alloca(sizeof(double));
+  *pi = 3.14159;
+
+  hashmap_set(obj, "a string", str);
+  hashmap_set(obj, "long number", number);
+  hashmap_set(obj, "pi", pi);
+  assert(hashmap_count_keys(obj) == 3);
+
+  char* exp_keys[] = {"a string", "long number", "pi"};
+  char** ret_keys = hashmap_get_keys(obj);
+  qsort(ret_keys, hashmap_count_keys(obj), sizeof(char*), str_comp);
+  for (size_t i = 0; i < hashmap_count_keys(obj); i++) {
+    assert(strcmp(*(ret_keys + i), *(exp_keys + i)) == 0);
+  }
+
+  hashmap_del(obj, "a string");
+  assert(hashmap_count_keys(obj) == 2);
+
+  hashmap_del(obj, "non-key");
+  hashmap_del(obj, "pi");
+  hashmap_del(obj, "pi");
+  assert(hashmap_count_keys(obj) == 1);
+  ret_keys = hashmap_get_keys(obj);
+  assert(strcmp(*ret_keys, "long number") == 0);
+
+  hashmap_del(obj, "long number");
+  assert(hashmap_count_keys(obj) == 0);
+
+  ret_keys = hashmap_get_keys(obj);
+  assert(ret_keys == NULL);
+}
+
+void pointers(hashmap_t* obj)
+{
+  long val1 = 29830193;
+  long val2 = -394810;
+
+  assert(hashmap_set(obj, "long value 1", &val1) == NULL);
+  assert(hashmap_set(obj, "long value 1", &val2) == &val1);
+  assert(hashmap_del(obj, "long value 1") == &val2);
+  assert(hashmap_del(obj, "non-key") == NULL);
+}
+
+int main(void)
+{
+  test("set, get, del work", set_get_del);
+  test("collision resolution (num keys > buckets) works", keys_over_buckets);
+  test("key count and retrieval works", key_methods);
+  test("set, get, del returned pointers are correct", pointers);
 }

@@ -17,8 +17,8 @@ typedef struct {
 hashmap_t* hashmap_create(void);
 void hashmap_free(hashmap_t** obj);
 
-void* hashmap_get(hashmap_t* obj, char* key);
 void* hashmap_set(hashmap_t* obj, char* key, void* value_ptr);
+void* hashmap_get(hashmap_t* obj, char* key);
 void* hashmap_del(hashmap_t* obj, char* key);
 
 size_t hashmap_count_keys(hashmap_t* obj);
