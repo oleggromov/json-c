@@ -46,6 +46,7 @@ static void pointer_correctness(dynarray2_t* arr)
 
   assert(dynarray2_get(arr, 0) == NULL);
   assert(dynarray2_get(arr, 129839030929) == NULL);
+  assert(dynarray2_get_top(arr) == NULL);
 
   dynarray2_set(arr, 0, &a);
   dynarray2_append(arr, &b);
