@@ -1,4 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include "hashmap.h"
+
 
 static void print_hash(char* str)
 {
@@ -38,7 +41,7 @@ int main()
   printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
 
   srand(time(NULL));
-  for (hashmap_size_t i = 0; i < 10000; i++) {
+  for (size_t i = 0; i < 10000; i++) {
     char* key = alloca(20 * sizeof(char));
     sprintf(key, "key-%d", i);
     int* value = alloca(sizeof(int));
@@ -50,14 +53,14 @@ int main()
     hashmap_set(hashmap, key, value);
   }
 
-  hashmap_size_t key_count = hashmap_count_keys(hashmap);
+  size_t key_count = hashmap_count_keys(hashmap);
 
   printf("key count = %d\n", key_count);
   printf("load factor = %f\n", hashmap_get_load_factor(hashmap));
 
   printf("\nNow removing test keys...\n");
   char** keys = hashmap_get_keys(hashmap);
-  for (hashmap_size_t i = 0; i < key_count - 50; i++) {
+  for (size_t i = 0; i < key_count - 50; i++) {
     if (strcmp("another key", keys[i]) != 0 && strcmp("test key", keys[i]) != 0) {
       hashmap_del(hashmap, keys[i]);
     }
@@ -71,7 +74,7 @@ int main()
   printf("Remaining keys:\n");
   key_count = hashmap_count_keys(hashmap);
   keys = hashmap_get_keys(hashmap);
-  for (hashmap_size_t i = 0; i < key_count; i++) {
+  for (size_t i = 0; i < key_count; i++) {
     if (strcmp("another key", keys[i]) == 0) {
       printf("%s=%s\t", keys[i], hashmap_get(hashmap, keys[i]));
     } else {
