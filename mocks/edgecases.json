@@ -15,8 +15,9 @@
     "float": 20930.4443,
     "negative": -3120,
     "negative float": -3.14159,
-    "scientific": 1.55e24,
-    "negative scientific": -1e12,
-    "negative scientific with negative power": -1e-3
+    "scientific": 1.55e11,
+    "negative scientific": -2e3,
+    "negative scientific with negative power": -1e-3,
+    "negative scientific with plus in power": -1.532e+5
   }
 }
