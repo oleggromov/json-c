@@ -58,6 +58,23 @@ static void pointer_correctness(dynarray2_t* arr)
   assert(dynarray2_get(arr, 2) == dynarray2_get_top(arr));
 }
 
+static void negative_indices(dynarray2_t* arr)
+{
+  char a = 'X', b = '2', c = '~';
+  dynarray2_set(arr, 0, &a);
+  dynarray2_append(arr, &b);
+  dynarray2_append(arr, &c);
+
+  dynarray2_get(arr, -255);
+  dynarray2_set(arr, -3, &c);
+  dynarray2_delete(arr, -1);
+
+  assert(*(char*) dynarray2_get(arr, 0) == a);
+  assert(*(char*) dynarray2_get(arr, 1) == b);
+  assert(*(char*) dynarray2_get(arr, 2) == c);
+  assert(arr->len == 3);
+}
+
 static void multiple_allocations(dynarray2_t* arr)
 {
   const int size = DYNARRAY2_ALLOC_STEP * 5;
@@ -153,13 +170,68 @@ static void arbitrary_len_array(dynarray2_t* arr)
   }
 }
 
+static void sparse_arrays(dynarray2_t* arr)
+{
+  int a = 5, b = 203, c = -48930, d = 283861;
+  dynarray2_set(arr, 0, &a);
+  assert(arr->len == 1);
+
+  dynarray2_set(arr, 250, &b);
+  assert(arr->len == 251);
+  dynarray2_append(arr, &c);
+  assert(arr->len == 252);
+
+  dynarray2_set(arr, 590, &d);
+  assert(arr->len == 591);
+
+  for (int i = 0; i < arr->len; i++) {
+    switch (i) {
+      case 0:
+        assert(*dynarray2_get_val(arr, i).ip == a);
+        break;
+      case 250:
+        assert(*dynarray2_get_val(arr, i).ip == b);
+        break;
+      case 251:
+        assert(*dynarray2_get_val(arr, i).ip == c);
+        break;
+      case 590:
+        assert(*dynarray2_get_val(arr, i).ip == d);
+        break;
+      default:
+        // Should it be 0s really?
+        assert(*dynarray2_get_val(arr, i).ip == 0);
+    }
+  }
+
+  dynarray2_delete(arr, 200);
+  dynarray2_delete(arr, 201);
+  assert(arr->len == 589);
+
+  assert(*dynarray2_get_val(arr, 249).ip == c);
+  dynarray2_delete(arr, 249);
+  assert(*dynarray2_get_val(arr, 249).ip == 0);
+  assert(arr->len == 588);
+
+  assert(*dynarray2_get_val(arr, 0).ip == a);
+  dynarray2_delete(arr, 0);
+  assert(*dynarray2_get_val(arr, 0).ip == 0);
+  assert(arr->len == 587);
+
+  assert(*dynarray2_get_val(arr, 247).ip == b);
+  assert(*dynarray2_get_val(arr, 586).ip == d);
+  assert(*dynarray2_get_top_val(arr).ip == d);
+}
+
 int main(void)
 {
   test("set, get, delete and len work", sizeof(int), set_get_delete_len);
   test("pointers are correct", sizeof(char), pointer_correctness);
+  test("negative indices don't break stuff", sizeof(char), negative_indices);
   test("multiple allocations work", sizeof(int), multiple_allocations);
   test("convenience methods append, get_top, remove_top work", sizeof(long), top_convenience);
   test("structs of arbitrary length are stored correctly", sizeof(struct TestStruct), arbitrary_len_struct);
   test("arrays of arbitrary length are stored correctly", sizeof(float[ARR_LEN]), arbitrary_len_array);
+  test("sparse arrays work", sizeof(int), sparse_arrays);
   return 0;
 }
