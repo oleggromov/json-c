@@ -5,8 +5,6 @@
 #include "util.h"
 #include "dynarray2.h"
 
-static const size_t ALLOC_STEP = 64;
-
 dynarray2_t* dynarray2_create(size_t item_size)
 {
   dynarray2_t* arr = malloc(sizeof(dynarray2_t));
@@ -37,7 +35,7 @@ static void _grow_if_needed(dynarray2_t* arr, size_t index)
 {
   if (index > arr->_capacity - 1 || arr->_capacity == 0) {
     size_t old_capacity = arr->_capacity;
-    size_t size_inc = (index / ALLOC_STEP + 1) * ALLOC_STEP - arr->_capacity;
+    size_t size_inc = (index / DYNARRAY2_ALLOC_STEP + 1) * DYNARRAY2_ALLOC_STEP - arr->_capacity;
 
     arr->_capacity += size_inc;
     arr->_mem = realloc(arr->_mem, arr->_item_size * arr->_capacity);

@@ -1,142 +1,164 @@
+#include <assert.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include <alloca.h>
 #include <stdio.h>
 #include "dynarray2.h"
 
-struct X {
-  long number;
-  char* str;
-  double double_number;
-};
+static int test_no = 0;
 
-void print_long_array(dynarray2_t* arr)
+static inline void test(char* name, size_t item_size, void (*fn)(dynarray2_t*))
 {
-  printf("Array len = %ld, capacity = %ld\n", arr->len, arr->_capacity);
-  printf("(");
-  for (size_t i = 0; i < arr->len; i++) {
-    printf("%ld ", *(long*) dynarray2_get(arr, i));
-  }
-  printf(")\n");
+  dynarray2_t* arr = dynarray2_create(item_size);
+
+  printf("%d: %s... ", ++test_no, name);
+  fn(arr);
+  printf("pass\n");
+
+  dynarray2_free(arr);
 }
 
-int main(void) {
-  // int a = 1;
-  // int b = 2;
-  // int c = 3;
+static void set_get_delete_len(dynarray2_t* arr)
+{
+  int a = 1, b = 1023, c = -509487738, d = 2763;
+  dynarray2_set(arr, 0, &a);
+  dynarray2_set(arr, 1, &b);
+  dynarray2_set(arr, 2, &c);
+  dynarray2_set(arr, 3, &d);
 
-  // dynarray2_t* arr = dynarray2_create(sizeof(int));
-  // dynarray2_append(arr, &a);
-  // dynarray2_append(arr, &b);
-  // dynarray2_append(arr, &c);
+  assert(*dynarray2_get_val(arr, 0).ip == a);
+  assert(*dynarray2_get_val(arr, 1).ip == b);
+  assert(*dynarray2_get_val(arr, 2).ip == c);
+  assert(*dynarray2_get_val(arr, 3).ip == d);
+  assert(arr->len == 4);
 
-  // DEBUG_dynarray2_dump(arr);
+  dynarray2_delete(arr, 1);
+  dynarray2_delete(arr, 1);
+  assert(*(int*) dynarray2_get(arr, 0) == a);
+  assert(*(int*) dynarray2_get(arr, 1) == d);
+  assert(arr->len == 2);
+}
 
-  // printf("0 = %d\n", *(int*) dynarray2_get(arr, 0));
-  // printf("1 = %d\n", *(int*) dynarray2_get(arr, 1));
-  // printf("2 = %d\n", *(int*) dynarray2_get(arr, 2));
+static void pointer_correctness(dynarray2_t* arr)
+{
+  char a = 'a', b = 'b', c = 'c';
 
-  // int d = 4;
-  // int e = 5;
+  assert(dynarray2_get(arr, 0) == NULL);
+  assert(dynarray2_get(arr, 129839030929) == NULL);
 
-  // dynarray2_set(arr, 0, &d);
-  // dynarray2_set(arr, 1, &e);
+  dynarray2_set(arr, 0, &a);
+  dynarray2_append(arr, &b);
+  dynarray2_append(arr, &c);
 
-  // printf("0 = %d\n", *(int*) dynarray2_get(arr, 0));
-  // printf("1 = %d\n", *(int*) dynarray2_get(arr, 1));
-  // printf("2 = %d\n", *(int*) dynarray2_get(arr, 2));
+  assert(dynarray2_get(arr, 0) != NULL);
+  assert(dynarray2_get(arr, 1) != NULL);
+  assert(dynarray2_get(arr, 2) != NULL);
+  assert(dynarray2_get(arr, 2) == dynarray2_get_top(arr));
+}
 
-  // int f = 6;
+static void multiple_allocations(dynarray2_t* arr)
+{
+  const int size = DYNARRAY2_ALLOC_STEP * 5;
+  int vals[size];
+  for (int i = 0; i < size; i++) {
+    vals[i] = i * 3;
+    dynarray2_set(arr, i, &vals[i]);
+  }
+  for (int i = 0; i < size; i++) {
+    assert(*(int*) dynarray2_get(arr, i) == vals[i]);
+  }
+  for (int i = 0; i < size; i++) {
+    dynarray2_remove_top(arr);
+  }
+  assert(arr->len == 0);
+}
 
-  // dynarray2_append(arr, &f);
-  // printf("0 = %d\n", *(int*) dynarray2_get(arr, 0));
-  // printf("1 = %d\n", *(int*) dynarray2_get(arr, 1));
-  // printf("2 = %d\n", *(int*) dynarray2_get(arr, 2));
-  // printf("3 = %d\n", *(int*) dynarray2_get(arr, 3));
+static void top_convenience(dynarray2_t* arr)
+{
+  long x = 12094837803, y = -19237382803, z = 9238784618263;
+  dynarray2_append(arr, &x);
+  dynarray2_append(arr, &y);
+  dynarray2_append(arr, &z);
+  assert(arr->len == 3);
 
-  // printf("Structs...\n\n");
+  assert(*(long*) dynarray2_get_top(arr) == z);
+  assert(arr->len == 3);
 
-  // struct X x = {.number = 15, .str = alloca(sizeof(char)*20), .double_number = 2.55};
-  // struct X y = {.number = -1023, .str = alloca(sizeof(char)*20), .double_number = 33.95};
+  dynarray2_remove_top(arr);
+  assert(*(long*) dynarray2_get_top(arr) == y);
+  assert(arr->len == 2);
 
-  // dynarray2_t* array = dynarray2_create(sizeof(struct X));
+  assert(*(long*) dynarray2_get_top(arr) == *(long*) dynarray2_get(arr, 1));
+}
 
-  // dynarray2_set(array, 0, &x);
-  // dynarray2_set(array, 1, &y);
+struct TestStruct {
+  int x;
+  float y;
+  char* str;
+  char buf[20];
+};
 
-  // DEBUG_dynarray2_dump(array);
+static void arbitrary_len_struct(dynarray2_t* arr)
+{
+  struct TestStruct a = {.x = 257, .y = 43.12, .str = "A long string", .buf = "Hello"};
+  struct TestStruct b = {.x = -100000, .y = 0.00002, .str = "Another str", .buf = "World"};
 
-  // struct X* ret_x = dynarray2_get(array, 0);
-  // struct X* ret_y = dynarray2_get(array, 1);
+  dynarray2_append(arr, &a);
+  dynarray2_append(arr, &b);
 
-  // printf("Storing structs...\n");
-  // printf("x address = %p, ret_x address = %p\n", (void*) &x, (void*) ret_x);
-  // printf("x:\n");
-  // printf("x.number = %ld\n", x.number);
-  // printf("x.str = %p\n", (void*) x.str);
-  // printf("x.double_number = %f\n", x.double_number);
+  struct TestStruct* ret_a = dynarray2_get(arr, 0);
+  struct TestStruct* ret_b = dynarray2_get(arr, 1);
 
-  // printf("\nret_x:\n");
-  // printf("ret_x.number = %ld\n", ret_x->number);
-  // printf("ret_x.str = %p\n", (void*) ret_x->str);
-  // printf("ret_x.double_number = %f\n", ret_x->double_number);
+  assert(ret_a->x == a.x);
+  assert(ret_a->y == a.y);
+  assert(strcmp(ret_a->str, a.str) == 0);
+  assert(strcmp(ret_a->buf, a.buf) == 0);
 
-  // printf("\nret_y:\n");
-  // printf("ret_y.number = %ld\n", ret_y->number);
-  // printf("ret_y.str = %p\n", (void*) ret_y->str);
-  // printf("ret_y.double_number = %f\n", ret_y->double_number);
+  assert(ret_b->x == b.x);
+  assert(ret_b->y == b.y);
+  assert(strcmp(ret_b->str, b.str) == 0);
+  assert(strcmp(ret_b->buf, b.buf) == 0);
 
-  printf("\nLong numbers...\n");
-  long num1 = 4;
-  long num2 = 1024;
+  dynarray2_delete(arr, 0);
+  assert(arr->len == 1);
 
-  dynarray2_t* array_longs = dynarray2_create(sizeof(long));
+  struct TestStruct* ret_only = dynarray2_get(arr, 0);
+  assert(ret_only->x == b.x);
+  assert(ret_only->y == b.y);
+  assert(strcmp(ret_only->str, b.str) == 0);
+  assert(strcmp(ret_only->buf, b.buf) == 0);
+}
 
-  printf("Removing top item from an EMPTY array...\n");
-  dynarray2_remove_top(array_longs);
-  // printf("Setting item i=-255...\n");
-  // dynarray2_set(array_longs, -255, &num1);
-  printf("Getting an i=-1...\n");
-  dynarray2_get(array_longs, -1);
-  printf("Setting an i=-1024...\n");
-  dynarray2_set(array_longs, -1024, &num1);
+static const int ARR_LEN = 733;
 
-  printf("Setting 0, 1...\n");
-  dynarray2_set(array_longs, 0, &num1);
-  dynarray2_set(array_longs, 1, &num2);
-  print_long_array(array_longs);
-
-  num2 -= 512;
-  dynarray2_set(array_longs, 10, &num2);
-
-  num1 = 665;
-  dynarray2_set(array_longs, 1, &num1);
-  printf("replaced item i=1, new item = %ld\n", *dynarray2_get_val(array_longs, 1).lp);
-
-  printf("array[top] = %ld\n", *(long*) dynarray2_get_top(array_longs));
-
-  print_long_array(array_longs);
-
-  printf("Appending 10 long items...\n");
-  for (long i = 0; i < 10; i++) {
-    long oh = (i + 1) * 1000;
-    dynarray2_append(array_longs, &oh);
+static void arbitrary_len_array(dynarray2_t* arr)
+{
+  float x[ARR_LEN], y[ARR_LEN];
+  for (int i = 0; i < ARR_LEN; i++) {
+    x[i] = (float) rand() / i;
+    y[i] = (float) rand() / rand() * x[i];
+  }
+  dynarray2_append(arr, &x);
+  dynarray2_append(arr, &y);
+  for (int i = 0; i < ARR_LEN; i++) {
+    assert(x[i] == *(dynarray2_get_val(arr, 0).fp + i));
+    assert(y[i] == *(dynarray2_get_val(arr, 1).fp + i));
   }
 
-  print_long_array(array_longs);
-
-  printf("array top = %ld, ptr = %p\n", *dynarray2_get_top_val(array_longs).lp, dynarray2_get_top(array_longs));
-
-  print_long_array(array_longs);
-
-  printf("\nRemoving two items from the top and popping one...\n");
-
-  dynarray2_remove_top(array_longs);
-  dynarray2_remove_top(array_longs);
-  print_long_array(array_longs);
-
-  printf("Removing 5 items from the end...\n");
-  for (size_t i = 0; i < 5; i++) {
-    dynarray2_remove_top(array_longs);
+  dynarray2_remove_top(arr);
+  for (int i = 0; i < ARR_LEN; i++) {
+    assert(x[i] == *(dynarray2_get_val(arr, 0).fp + i));
   }
+}
 
-  print_long_array(array_longs);
+int main(void)
+{
+  test("set, get, delete and len work", sizeof(int), set_get_delete_len);
+  test("pointers are correct", sizeof(char), pointer_correctness);
+  test("multiple allocations work", sizeof(int), multiple_allocations);
+  test("convenience methods append, get_top, remove_top work", sizeof(long), top_convenience);
+  test("structs of arbitrary length are stored correctly", sizeof(struct TestStruct), arbitrary_len_struct);
+  test("arrays of arbitrary length are stored correctly", sizeof(float[ARR_LEN]), arbitrary_len_array);
+  return 0;
 }

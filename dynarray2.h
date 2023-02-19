@@ -3,6 +3,8 @@
 #ifndef DYNARRAY2_H
 #define DYNARRAY2_H
 
+static const size_t DYNARRAY2_ALLOC_STEP = 64;
+
 typedef struct {
   size_t len;
   size_t _capacity;
