@@ -4,23 +4,13 @@
 #include <string.h>
 #include <alloca.h>
 #include <stdio.h>
+
+#include "testlib.h"
 #include "dynarray2.h"
 
-static int test_no = 0;
-
-static inline void test(char* name, size_t item_size, void (*fn)(dynarray2_t*))
+static void set_get_delete_len(void* void_obj)
 {
-  dynarray2_t* arr = dynarray2_create(item_size);
-
-  printf("%d: %s... ", ++test_no, name);
-  fn(arr);
-  printf("pass\n");
-
-  dynarray2_free(arr);
-}
-
-static void set_get_delete_len(dynarray2_t* arr)
-{
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   int a = 1, b = 1023, c = -509487738, d = 2763;
   dynarray2_set(arr, 0, &a);
   dynarray2_set(arr, 1, &b);
@@ -40,8 +30,9 @@ static void set_get_delete_len(dynarray2_t* arr)
   assert(arr->len == 2);
 }
 
-static void pointer_correctness(dynarray2_t* arr)
+static void pointer_correctness(void* void_obj)
 {
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   char a = 'a', b = 'b', c = 'c';
 
   assert(dynarray2_get(arr, 0) == NULL);
@@ -58,8 +49,9 @@ static void pointer_correctness(dynarray2_t* arr)
   assert(dynarray2_get(arr, 2) == dynarray2_get_top(arr));
 }
 
-static void negative_indices(dynarray2_t* arr)
+static void negative_indices(void* void_obj)
 {
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   char a = 'X', b = '2', c = '~';
   dynarray2_set(arr, 0, &a);
   dynarray2_append(arr, &b);
@@ -75,8 +67,9 @@ static void negative_indices(dynarray2_t* arr)
   assert(arr->len == 3);
 }
 
-static void multiple_allocations(dynarray2_t* arr)
+static void multiple_allocations(void* void_obj)
 {
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   const int size = DYNARRAY2_ALLOC_STEP * 5;
   int vals[size];
   for (int i = 0; i < size; i++) {
@@ -92,8 +85,9 @@ static void multiple_allocations(dynarray2_t* arr)
   assert(arr->len == 0);
 }
 
-static void top_convenience(dynarray2_t* arr)
+static void top_convenience(void* void_obj)
 {
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   long x = 12094837803, y = -19237382803, z = 9238784618263;
   dynarray2_append(arr, &x);
   dynarray2_append(arr, &y);
@@ -117,8 +111,9 @@ struct TestStruct {
   char buf[20];
 };
 
-static void arbitrary_len_struct(dynarray2_t* arr)
+static void arbitrary_len_struct(void* void_obj)
 {
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   struct TestStruct a = {.x = 257, .y = 43.12, .str = "A long string", .buf = "Hello"};
   struct TestStruct b = {.x = -100000, .y = 0.00002, .str = "Another str", .buf = "World"};
 
@@ -150,8 +145,9 @@ static void arbitrary_len_struct(dynarray2_t* arr)
 
 static const int ARR_LEN = 733;
 
-static void arbitrary_len_array(dynarray2_t* arr)
+static void arbitrary_len_array(void* void_obj)
 {
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   float x[ARR_LEN], y[ARR_LEN];
   for (int i = 0; i < ARR_LEN; i++) {
     x[i] = (float) rand() / i;
@@ -170,8 +166,9 @@ static void arbitrary_len_array(dynarray2_t* arr)
   }
 }
 
-static void sparse_arrays(dynarray2_t* arr)
+static void sparse_arrays(void* void_obj)
 {
+  dynarray2_t* arr = (dynarray2_t*) void_obj;
   int a = 5, b = 203, c = -48930, d = 283861;
   dynarray2_set(arr, 0, &a);
   assert(arr->len == 1);
@@ -184,7 +181,7 @@ static void sparse_arrays(dynarray2_t* arr)
   dynarray2_set(arr, 590, &d);
   assert(arr->len == 591);
 
-  for (int i = 0; i < arr->len; i++) {
+  for (size_t i = 0; i < arr->len; i++) {
     switch (i) {
       case 0:
         assert(*dynarray2_get_val(arr, i).ip == a);
@@ -223,15 +220,22 @@ static void sparse_arrays(dynarray2_t* arr)
   assert(*dynarray2_get_top_val(arr).ip == d);
 }
 
+void* b_int() { return (void*) dynarray2_create(sizeof(int)); }
+void* b_char() { return (void*) dynarray2_create(sizeof(char)); }
+void* b_long() { return (void*) dynarray2_create(sizeof(long)); }
+void* b_struct() { return (void*) dynarray2_create(sizeof(struct TestStruct)); }
+void* b_flarr() { return (void*) dynarray2_create(sizeof(float[ARR_LEN])); }
+
+void a(void* obj) { dynarray2_free((dynarray2_t*) obj); }
+
 int main(void)
 {
-  test("set, get, delete and len work", sizeof(int), set_get_delete_len);
-  test("pointers are correct", sizeof(char), pointer_correctness);
-  test("negative indices don't break stuff", sizeof(char), negative_indices);
-  test("multiple allocations work", sizeof(int), multiple_allocations);
-  test("convenience methods append, get_top, remove_top work", sizeof(long), top_convenience);
-  test("structs of arbitrary length are stored correctly", sizeof(struct TestStruct), arbitrary_len_struct);
-  test("arrays of arbitrary length are stored correctly", sizeof(float[ARR_LEN]), arbitrary_len_array);
-  test("sparse arrays work", sizeof(int), sparse_arrays);
-  return 0;
+  test("set, get, delete and len work", set_get_delete_len, b_int, a);
+  test("pointers are correct", pointer_correctness, b_char, a);
+  test("negative indices don't break stuff", negative_indices, b_char, a);
+  test("multiple allocations work",multiple_allocations, b_int, a);
+  test("convenience methods append, get_top, remove_top work", top_convenience, b_long, a);
+  test("structs of arbitrary length are stored correctly", arbitrary_len_struct, b_struct, a);
+  test("arrays of arbitrary length are stored correctly", arbitrary_len_array, b_flarr, a);
+  test("sparse arrays work", sparse_arrays, b_int, a);
 }

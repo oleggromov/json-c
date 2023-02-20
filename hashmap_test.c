@@ -4,23 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "testlib.h"
 #include "hashmap.h"
 
-static int test_no = 0;
-
-static inline void test(char* name, void (*fn)(hashmap_t*))
+void set_get_del(void* void_obj)
 {
-  hashmap_t* hashmap = hashmap_create();
+  hashmap_t* obj = (hashmap_t*) void_obj;
 
-  printf("%d: %s... ", ++test_no, name);
-  fn(hashmap);
-  printf("pass\n");
-
-  hashmap_free(&hashmap);
-}
-
-void set_get_del(hashmap_t* obj)
-{
   char* str = alloca(sizeof("hello world") + 1);
   *str = '\0';
   strcat(str, "hello world");
@@ -52,8 +42,9 @@ void set_get_del(hashmap_t* obj)
   assert(hashmap_get(obj, "long number") == NULL);
 }
 
-void keys_over_buckets(hashmap_t* obj)
+void keys_over_buckets(void* void_obj)
 {
+  hashmap_t* obj = (hashmap_t*) void_obj;
   const int size = HASHMAP_SIZE_BUCKETS * 10;
   long *values = alloca(sizeof(long) * size);
   char *keys = alloca(sizeof(char) * 30 * size);
@@ -72,13 +63,9 @@ void keys_over_buckets(hashmap_t* obj)
   }
 }
 
-static inline int str_comp(const void* s1, const void* s2)
+void key_methods(void* void_obj)
 {
-  return strcmp(*(char**) s1, *(char**) s2);
-}
-
-void key_methods(hashmap_t* obj)
-{
+  hashmap_t* obj = (hashmap_t*) void_obj;
   char* str = alloca(sizeof("hello world") + 1);
   *str = '\0';
   strcat(str, "hello world");
@@ -94,7 +81,7 @@ void key_methods(hashmap_t* obj)
 
   char* exp_keys[] = {"a string", "long number", "pi"};
   char** ret_keys = hashmap_get_keys(obj);
-  qsort(ret_keys, hashmap_count_keys(obj), sizeof(char*), str_comp);
+  test_sort_strings(ret_keys, hashmap_count_keys(obj));
   for (size_t i = 0; i < hashmap_count_keys(obj); i++) {
     assert(strcmp(*(ret_keys + i), *(exp_keys + i)) == 0);
   }
@@ -116,8 +103,9 @@ void key_methods(hashmap_t* obj)
   assert(ret_keys == NULL);
 }
 
-void pointers(hashmap_t* obj)
+void pointers(void* void_obj)
 {
+  hashmap_t* obj = (hashmap_t*) void_obj;
   long val1 = 29830193;
   long val2 = -394810;
 
@@ -127,10 +115,20 @@ void pointers(hashmap_t* obj)
   assert(hashmap_del(obj, "non-key") == NULL);
 }
 
+void* b(void)
+{
+  return (void*) hashmap_create();
+}
+
+void a(void* obj)
+{
+  hashmap_free((hashmap_t**) &obj);
+}
+
 int main(void)
 {
-  test("set, get, del work", set_get_del);
-  test("collision resolution (num keys > buckets) works", keys_over_buckets);
-  test("key count and retrieval works", key_methods);
-  test("set, get, del returned pointers are correct", pointers);
+  test("set, get, del work", set_get_del, b, a);
+  test("collision resolution (num keys > buckets) works", keys_over_buckets, b, a);
+  test("key count and retrieval works", key_methods, b, a);
+  test("set, get, del returned pointers are correct", pointers, b, a);
 }
