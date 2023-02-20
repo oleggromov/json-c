@@ -17,11 +17,6 @@ void test(char* name, void (*test_case)(void*), void* (*before)(void), void (*af
   after(obj);
 }
 
-void expect(bool cond, char* msg)
-{
-
-}
-
 static inline int str_comp(const void* s1, const void* s2)
 {
   return strcmp(*(char**) s1, *(char**) s2);
