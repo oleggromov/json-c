@@ -15,6 +15,9 @@ dynarray2_test: dynarray2_test.c dynarray2.o util.o testlib.o
 hashmap_test: hashmap_test.c hashmap.o murmur3_32.o util.o testlib.o
 	$(CC) $(CFLAGS) -o $@.out $^
 
+args_test: args_test.c args.o testlib.o
+	$(CC) $(CFLAGS) -o $@.out $^
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
