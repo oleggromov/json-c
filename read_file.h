@@ -1,7 +1,6 @@
 #ifndef READ_FILE_H
 #define READ_FILE_H
 
-#include <stdio.h>
 #include <stdlib.h>
 
 typedef enum {

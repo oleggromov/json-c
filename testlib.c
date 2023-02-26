@@ -4,10 +4,9 @@
 
 #include "testlib.h"
 
-static int test_no = 0;
-
 void test(char* name, void (*test_case)(void*), void* (*before)(void), void (*after)(void*))
 {
+  static int test_no = 0;
   void* obj = before();
 
   printf("%d: %s... ", ++test_no, name);

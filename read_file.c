@@ -1,5 +1,7 @@
 #include "read_file.h"
 
+#include <stdio.h>
+
 text_file_t* read_text_file(char* filename)
 {
   text_file_t* result = malloc(sizeof(text_file_t));
