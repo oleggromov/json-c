@@ -50,12 +50,25 @@ int main(int argc, char** argv)
   end = clock();
   printf("Parsing took: %f ms\n", ((double) end - start) / CLOCKS_PER_SEC * 1000);
 
+  dynarray2_free(tokens);
+  printf("Freed tokens...\n");
+
   start = clock();
   char* serialized = serialize(root);
   end = clock();
   printf("Serialization took: %f ms\n", ((double) end - start) / CLOCKS_PER_SEC * 1000);
   // printf("\n\nSERIALIZED:\n");
   // printf("%s\n", serialized);
+
+
+  FILE* fout = NULL;
+  fout = fopen(args.output_file, "w");
+  if (fout == NULL) {
+    die("couldn't open %s for writing", args.output_file);
+  }
+
+  fputs(serialized, fout);
+  fclose(fout);
 
   return EXIT_SUCCESS;
 }

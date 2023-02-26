@@ -1,7 +1,7 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
 
-static const size_t HASHMAP_SIZE_BUCKETS = 1024;
+static const size_t HASHMAP_SIZE_BUCKETS = 16;
 
 typedef struct {
   char* key;
